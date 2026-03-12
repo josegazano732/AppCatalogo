@@ -1,0 +1,7 @@
+@import './shared/instagram-button/instagram-button.component.css';
+@import './shared/whatsapp-button/whatsapp-button.component.css';
+
+:host {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #16251f;
+}

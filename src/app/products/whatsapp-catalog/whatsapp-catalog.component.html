@@ -1,0 +1,175 @@
+<section class="wa-catalog-page">
+  <header class="wa-hero glass-card">
+    <div>
+      <p class="hero-kicker">APP-Mate</p>
+      <h1>Catalogo Mayorista</h1>
+      <p>Selecciona productos, ajusta cantidades y envia tu pedido en un clic.</p>
+    </div>
+
+    <div class="hero-actions">
+      <button type="button" class="btn-outline" (click)="goToProducts()">Ver catalogo general</button>
+      <button type="button" class="btn-outline" (click)="goToCart()">Ir al carrito</button>
+    </div>
+  </header>
+
+  <section class="wa-filters glass-card">
+    <label>
+      Buscar
+      <input
+        type="text"
+        placeholder="Nombre, descripcion o categoria"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applyFilters()"
+      >
+    </label>
+
+    <label>
+      Categoria
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
+        <option value="">Todas</option>
+        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+      </select>
+    </label>
+  </section>
+
+  <section class="wa-state glass-card" *ngIf="isLoading">
+    <p>Cargando productos mayoristas...</p>
+  </section>
+
+  <section class="wa-state glass-card error" *ngIf="errorMessage">
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section class="wa-list glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="list-header">
+      <span>Producto</span>
+      <span>Precio Mayorista</span>
+      <span>Cantidad</span>
+      <span>Accion</span>
+    </div>
+
+    <article class="list-row" *ngFor="let product of displayedProducts">
+      <div class="product-main">
+        <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
+        <div class="product-text">
+          <h3>{{ product.name }}</h3>
+          <p>{{ product.description }}</p>
+          <small>{{ getCategoryLabel(product) }}</small>
+        </div>
+      </div>
+
+      <div class="price-col">
+        <strong>{{ formatPrice(getWholesalePrice(product)) }}</strong>
+        <small *ngIf="product.unit_of_measure">/{{ product.unit_of_measure }}</small>
+      </div>
+
+      <div class="qty-col">
+        <button type="button" (click)="decreaseOrder(product)" [disabled]="getProductQuantity(product.id) === 0">-</button>
+        <span>{{ getProductQuantity(product.id) }}</span>
+        <button type="button" (click)="increaseOrder(product)">+</button>
+      </div>
+
+      <div class="action-col">
+        <button type="button" class="btn-add" (click)="addOrder(product)">Agregar</button>
+      </div>
+    </article>
+
+    <div class="empty" *ngIf="filteredProducts.length === 0">
+      <p>No hay productos que coincidan con los filtros actuales.</p>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button type="button" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">Anterior</button>
+      <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+      <button type="button" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">Siguiente</button>
+    </div>
+  </section>
+
+  <footer class="wa-summary glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="summary-cart-pill">
+      <i class="fas fa-shopping-basket"></i>
+      <span>{{ orderCount }} productos</span>
+    </div>
+
+    <div class="summary-amount">
+      <p>Subtotal</p>
+      <strong>{{ formatPrice(orderSubtotal) }}</strong>
+    </div>
+
+    <div class="summary-actions">
+      <button type="button" class="btn-clear" (click)="clearOrder()" [disabled]="orderItems.length === 0">Vaciar</button>
+      <button type="button" class="btn-send" (click)="openWhatsAppConfirmModal()" [disabled]="orderItems.length === 0">
+        Enviar pedido
+      </button>
+    </div>
+  </footer>
+</section>
+
+<div class="wa-confirm-modal" *ngIf="showWhatsAppConfirmModal">
+  <div class="wa-confirm-backdrop" (click)="closeWhatsAppConfirmModal()"></div>
+
+  <section class="wa-confirm-dialog">
+    <header class="confirm-top">
+      <div class="confirm-options">
+        <div class="confirm-option-group" [class.invalid]="submitAttempted && !isPaymentSelected()">
+          <p class="group-title">Metodo de pago *</p>
+          <label>
+            <input type="radio" name="paymentMethod" value="efectivo" [(ngModel)]="paymentMethod">
+            Pago en Efectivo
+          </label>
+          <label>
+            <input type="radio" name="paymentMethod" value="transferencia" [(ngModel)]="paymentMethod">
+            Pago por Transferencia
+          </label>
+        </div>
+
+        <div class="confirm-option-group" [class.invalid]="submitAttempted && !isDeliverySelected()">
+          <p class="group-title">Tipo de entrega *</p>
+          <label>
+            <input type="radio" name="deliveryMethod" value="domicilio" [(ngModel)]="deliveryMethod" (ngModelChange)="onDeliveryMethodChange($event)">
+            Envio a Domicilio
+          </label>
+          <label>
+            <input type="radio" name="deliveryMethod" value="retiro" [(ngModel)]="deliveryMethod" (ngModelChange)="onDeliveryMethodChange($event)">
+            Retiro por Tienda
+          </label>
+        </div>
+      </div>
+
+      <button type="button" class="close-confirm" (click)="closeWhatsAppConfirmModal()" aria-label="Cerrar">
+        <i class="fas fa-times"></i>
+      </button>
+    </header>
+
+    <div class="confirm-body">
+      <div class="confirm-fields">
+        <input type="text" [(ngModel)]="customerName" placeholder="¿Tu Nombre?" [class.invalid-field]="submitAttempted && customerName.trim().length <= 1">
+        <input type="text" [(ngModel)]="customerLastName" placeholder="¿Tu Apellido?" [class.invalid-field]="submitAttempted && customerLastName.trim().length <= 1">
+        <input
+          type="text"
+          [(ngModel)]="customerAddress"
+          placeholder="¿Tu Direccion?"
+          [class.invalid-field]="submitAttempted && isAddressRequired() && customerAddress.trim().length <= 4"
+          [disabled]="deliveryMethod === 'retiro'"
+        >
+      </div>
+
+      <div class="confirm-order">
+        <h3>Pedido</h3>
+        <ul>
+          <li *ngFor="let item of orderItems">
+            {{ item.quantity }} {{ item.name }} ( {{ formatPrice(item.price * item.quantity) }} )
+          </li>
+        </ul>
+        <p class="confirm-total">Total: {{ formatPrice(orderSubtotal) }}</p>
+      </div>
+
+      <p class="confirm-error" *ngIf="confirmError">{{ confirmError }}</p>
+    </div>
+
+    <footer class="confirm-footer">
+      <button type="button" class="btn-modal secondary" (click)="closeWhatsAppConfirmModal()">Modificar</button>
+      <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Si, lo quiero!</button>
+    </footer>
+  </section>
+</div>
