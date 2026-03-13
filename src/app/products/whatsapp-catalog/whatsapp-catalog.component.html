@@ -73,6 +73,65 @@
     </div>
   </section>
 
+  <section class="wa-mix-pack glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="mix-copy">
+      <p class="mix-kicker">Pack de incorporacion ampliado</p>
+      <h2>Pack Mix 2</h2>
+      <p class="mix-description">
+        Incluye la variante completa de 500 g y 1 kg para Don Julian y Mateite, mas Yerbella y mate cocido.
+      </p>
+
+      <div class="mix-actions-row">
+        <button
+          type="button"
+          class="btn-mix"
+          (click)="addMixPackTwoToCart()"
+          [disabled]="!mixPackTwoIsComplete"
+        >
+          <i class="fas fa-boxes-stacked" aria-hidden="true"></i>
+          <span>Agregar Pack Mix 2</span>
+        </button>
+        <p class="mix-total">Total estimado: <strong>{{ formatPrice(mixPackTwoTotal) }}</strong></p>
+      </div>
+
+      <p
+        class="mix-feedback"
+        *ngIf="mixPackTwoFeedback"
+        [class.warning]="mixPackTwoFeedbackTone === 'warning'"
+      >
+        {{ mixPackTwoFeedback }}
+      </p>
+    </div>
+
+    <div class="mix-table-wrap" aria-label="Detalle del Pack Mix 2">
+      <table class="mix-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentacion</th>
+            <th>Cantidad</th>
+            <th>Subtotal pack</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mixItem of mixPackTwoItems">
+            <td>{{ mixItem.name }}</td>
+            <td>{{ mixItem.presentation }}</td>
+            <td>{{ mixItem.quantity }} pack</td>
+            <td>
+              <strong *ngIf="getMixPackTwoItemPrice(mixItem) !== null; else mixTwoNoPrice">
+                {{ formatPrice(getMixPackTwoItemPrice(mixItem) || 0) }}
+              </strong>
+              <ng-template #mixTwoNoPrice>
+                <span class="mix-unavailable">No disponible</span>
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <section class="wa-state glass-card" *ngIf="isLoading">
     <p>Cargando productos mayoristas...</p>
   </section>
