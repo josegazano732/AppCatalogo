@@ -363,6 +363,10 @@
 }
 
 .btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   background: var(--warm-soft);
   color: #655235;
 }
@@ -410,47 +414,57 @@
 
 .wa-confirm-dialog {
   position: relative;
-  width: min(760px, calc(100% - 2rem));
-  margin: 4rem auto;
-  background: #ffffff;
-  border-radius: 16px;
+  width: min(920px, calc(100% - 2rem));
+  margin: 3.2rem auto;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdf7 100%);
+  border: 1px solid #dbe6c8;
+  border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 25px 60px rgb(16 29 23 / 28%);
+  max-height: calc(100dvh - 6.4rem);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  box-shadow: 0 28px 62px rgb(16 29 23 / 28%);
 }
 
 .confirm-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
-  background: #f2f6e9;
+  align-items: stretch;
+  gap: 1.15rem;
+  padding: 1.15rem;
+  background:
+    radial-gradient(circle at 12% -120%, rgb(194 223 126 / 45%) 0%, rgb(194 223 126 / 0%) 62%),
+    linear-gradient(180deg, #f2f7e8 0%, #ecf3df 100%);
+  border-bottom: 1px solid #dbe6c8;
 }
 
 .confirm-heading h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
+  letter-spacing: 0.01em;
 }
 
 .confirm-heading p {
-  margin: 0.2rem 0 0;
+  margin: 0.25rem 0 0;
   color: #5b6f45;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 
 .confirm-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
   flex: 1;
+  align-self: center;
 }
 
 .confirm-option-group {
-  border: 1px solid #d2ddc0;
+  border: 1px solid #cedab8;
   border-radius: 12px;
-  padding: 0.8rem;
+  padding: 0.75rem;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  background: rgb(255 255 255 / 64%);
 }
 
 .confirm-option-group.invalid {
@@ -476,21 +490,26 @@
   align-self: flex-start;
   border: 0;
   border-radius: 10px;
-  width: 2rem;
-  height: 2rem;
+  width: 2.1rem;
+  height: 2.1rem;
   cursor: pointer;
   background: #ffffff;
+  color: #40582a;
+  box-shadow: 0 8px 18px rgb(34 51 20 / 15%);
 }
 
 .confirm-body {
-  padding: 1rem;
+  padding: 1rem 1.15rem;
   display: grid;
-  gap: 1.1rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+  overflow-y: auto;
 }
 
 .confirm-fields {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -503,6 +522,10 @@
   background: #fbfcf7;
   color: #2f3d23;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.confirm-fields input:nth-child(3) {
+  grid-column: 1 / -1;
 }
 
 .confirm-fields input:focus {
@@ -524,8 +547,9 @@
 .confirm-order {
   border: 1px solid #d8e1c8;
   border-radius: 12px;
-  padding: 0.8rem;
+  padding: 0.9rem;
   background: linear-gradient(180deg, #fcfdf8 0%, #f4f8ea 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%);
 }
 
 .confirm-order ul {
@@ -540,6 +564,7 @@
 
 .confirm-error {
   margin: 0;
+  grid-column: 1 / -1;
   border: 1px solid #e8bbb2;
   border-radius: 10px;
   background: #fff7f5;
@@ -550,7 +575,7 @@
 
 .confirm-footer {
   border-top: 1px solid #e3ead8;
-  padding: 1rem;
+  padding: 0.9rem 1.15rem;
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
@@ -620,6 +645,14 @@ button:disabled {
   .qty-col,
   .action-col {
     justify-content: flex-start;
+  }
+
+  .confirm-body {
+    grid-template-columns: 1fr;
+  }
+
+  .confirm-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

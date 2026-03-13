@@ -38,6 +38,7 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
   customerName = '';
   customerLastName = '';
   customerAddress = '';
+  customerPostalCode = '';
   paymentMethod = '';
   deliveryMethod = '';
 
@@ -206,7 +207,12 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     this.deliveryMethod = method;
     if (method === 'retiro') {
       this.customerAddress = '';
+      this.customerPostalCode = '';
     }
+  }
+
+  onPostalCodeChange(value: string): void {
+    this.customerPostalCode = (value || '').replace(/\D/g, '').slice(0, 5);
   }
 
   isPaymentSelected(): boolean {
@@ -219,6 +225,15 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
 
   isAddressRequired(): boolean {
     return this.deliveryMethod === 'domicilio';
+  }
+
+  isPostalCodeValid(): boolean {
+    if (!this.isAddressRequired()) {
+      return true;
+    }
+
+    const postalCode = this.customerPostalCode.trim();
+    return postalCode.length > 0 && /^\d{1,5}$/.test(postalCode);
   }
 
   getConfirmValidationErrors(): string[] {
@@ -242,6 +257,10 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
 
     if (this.isAddressRequired() && this.customerAddress.trim().length <= 4) {
       errors.push('Ingresa una direccion valida para envio a domicilio.');
+    }
+
+    if (!this.isPostalCodeValid()) {
+      errors.push('Ingresa un codigo postal valido (hasta 5 digitos) para envio a domicilio.');
     }
 
     return errors;
@@ -276,6 +295,7 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
 
     if (this.isAddressRequired()) {
       lines.push(`Direccion: ${this.customerAddress.trim()}`);
+      lines.push(`CP: ${this.customerPostalCode.trim()}`);
     }
 
     const encodedMessage = encodeURIComponent(lines.join('\n'));
