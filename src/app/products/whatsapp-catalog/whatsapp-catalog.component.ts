@@ -1,5 +1,4 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { CartItem } from '../../models/cart-item.model';
@@ -42,15 +41,14 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
   paymentMethod = '';
   deliveryMethod = '';
 
-  whatsappPhone = '5491112345678';
+  whatsappPhone = '5493758418515';
   whatsappCategories = ['Yerba Mate', 'Mate Cocido'];
 
   private readonly subscriptions = new Subscription();
 
   constructor(
     private readonly productService: ProductService,
-    private readonly cartService: CartService,
-    private readonly router: Router
+    private readonly cartService: CartService
   ) {}
 
   ngOnInit(): void {
@@ -66,6 +64,7 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.toggleModalBodyState(false);
     this.subscriptions.unsubscribe();
   }
 
@@ -193,12 +192,14 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     this.confirmError = '';
     this.submitAttempted = false;
     this.showWhatsAppConfirmModal = true;
+    this.toggleModalBodyState(true);
   }
 
   closeWhatsAppConfirmModal(): void {
     this.showWhatsAppConfirmModal = false;
     this.submitAttempted = false;
     this.confirmError = '';
+    this.toggleModalBodyState(false);
   }
 
   onDeliveryMethodChange(method: string): void {
@@ -293,6 +294,19 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
   }
 
+  getUnitPrice(product: Product): number {
+    const divisor = this.getUnitDivisor(product);
+    return this.getWholesalePrice(product) / divisor;
+  }
+
+  getSuggestedSaleMin(product: Product): number {
+    return this.getUnitPrice(product) * 1.4;
+  }
+
+  getSuggestedSaleMax(product: Product): number {
+    return this.getUnitPrice(product) * 1.5;
+  }
+
   getCategoryLabel(product: Product): string {
     return product.category_name || product.category || 'Sin categoria';
   }
@@ -305,12 +319,18 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     }).format(value);
   }
 
-  goToProducts(): void {
-    this.router.navigate(['/productos']);
-  }
+  private getUnitDivisor(product: Product): number {
+    const category = this.normalizeText(this.getCategoryLabel(product));
 
-  goToCart(): void {
-    this.router.navigate(['/carrito']);
+    if (category.includes('yerba mate')) {
+      return 10;
+    }
+
+    if (category.includes('mate cocido')) {
+      return 20;
+    }
+
+    return 1;
   }
 
   private normalizeText(value: string): string {
@@ -319,5 +339,13 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  private toggleModalBodyState(isOpen: boolean): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.body.classList.toggle('wa-modal-open', isOpen);
   }
 }

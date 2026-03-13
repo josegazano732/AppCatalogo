@@ -1,23 +1,25 @@
 <section class="wa-catalog-page">
   <header class="wa-hero glass-card">
     <div>
-      <p class="hero-kicker">APP-Mate</p>
-      <h1>Catalogo Mayorista</h1>
-      <p>Selecciona productos, ajusta cantidades y envia tu pedido en un clic.</p>
+      <p class="hero-kicker">AMATE Pedidos</p>
+      <h1>Catálogo Comercial</h1>
+      <p class="hero-description">Incorporá nuestras marcas o reponé tu stock de forma simple. Armá tu pedido y envialo por WhatsApp en menos de un minuto.</p>
     </div>
 
-    <div class="hero-actions">
-      <button type="button" class="btn-outline" (click)="goToProducts()">Ver catalogo general</button>
-      <button type="button" class="btn-outline" (click)="goToCart()">Ir al carrito</button>
+    <div class="hero-logo-shell" aria-hidden="true">
+      <div class="hero-logo-ring">
+        <img class="hero-logo" src="assets/branding/amate-logo.jpg" alt="Logo de APP-Mate">
+      </div>
     </div>
+
   </header>
 
   <section class="wa-filters glass-card">
     <label>
-      Buscar
+      Buscar producto
       <input
         type="text"
-        placeholder="Nombre, descripcion o categoria"
+        placeholder="Ej: Yerba suave, organica, cocido..."
         [(ngModel)]="searchTerm"
         (ngModelChange)="applyFilters()"
       >
@@ -26,10 +28,16 @@
     <label>
       Categoria
       <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
-        <option value="">Todas</option>
+        <option value="">Todas las categorias</option>
         <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
       </select>
     </label>
+
+    <div class="filters-meta" aria-live="polite">
+      <p>
+        Mostrando <strong>{{ filteredProducts.length }}</strong> de <strong>{{ products.length }}</strong> productos
+      </p>
+    </div>
   </section>
 
   <section class="wa-state glass-card" *ngIf="isLoading">
@@ -43,9 +51,9 @@
   <section class="wa-list glass-card" *ngIf="!isLoading && !errorMessage">
     <div class="list-header">
       <span>Producto</span>
-      <span>Precio Mayorista</span>
+      <span>Precio por Pack</span>
       <span>Cantidad</span>
-      <span>Accion</span>
+      <span>Agregar</span>
     </div>
 
     <article class="list-row" *ngFor="let product of displayedProducts">
@@ -53,29 +61,33 @@
         <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
           <h3>{{ product.name }}</h3>
-          <p>{{ product.description }}</p>
+          <p>Precio Unidad: {{ formatPrice(getUnitPrice(product)) }}</p>
+          <p class="sale-suggested">
+            Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
+            <small>(+40% a +50%)</small>
+          </p>
           <small>{{ getCategoryLabel(product) }}</small>
         </div>
       </div>
 
       <div class="price-col">
         <strong>{{ formatPrice(getWholesalePrice(product)) }}</strong>
-        <small *ngIf="product.unit_of_measure">/{{ product.unit_of_measure }}</small>
       </div>
 
       <div class="qty-col">
-        <button type="button" (click)="decreaseOrder(product)" [disabled]="getProductQuantity(product.id) === 0">-</button>
+        <button type="button" (click)="decreaseOrder(product)" [disabled]="getProductQuantity(product.id) === 0" aria-label="Quitar una unidad">-</button>
         <span>{{ getProductQuantity(product.id) }}</span>
-        <button type="button" (click)="increaseOrder(product)">+</button>
+        <button type="button" (click)="increaseOrder(product)" aria-label="Sumar una unidad">+</button>
       </div>
 
       <div class="action-col">
-        <button type="button" class="btn-add" (click)="addOrder(product)">Agregar</button>
+        <button type="button" class="btn-add" (click)="addOrder(product)">Agregar 1</button>
       </div>
     </article>
 
     <div class="empty" *ngIf="filteredProducts.length === 0">
-      <p>No hay productos que coincidan con los filtros actuales.</p>
+      <p>No encontramos productos con esos filtros.</p>
+      <small>Prueba con otra palabra o selecciona "Todas las categorias".</small>
     </div>
 
     <div class="pagination" *ngIf="totalPages > 1">
@@ -88,18 +100,28 @@
   <footer class="wa-summary glass-card" *ngIf="!isLoading && !errorMessage">
     <div class="summary-cart-pill">
       <i class="fas fa-shopping-basket"></i>
-      <span>{{ orderCount }} productos</span>
+      <span>{{ orderCount }} unidades en tu pedido</span>
+    </div>
+
+    <div class="summary-social" aria-label="Redes y contacto rapido">
+      <a class="floating-btn floating-whatsapp summary-floating" href="https://wa.me/5493758418515" target="_blank" rel="noreferrer" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+      </a>
+      <a class="floating-btn floating-instagram summary-floating" href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
     </div>
 
     <div class="summary-amount">
-      <p>Subtotal</p>
+      <p>Total estimado</p>
       <strong>{{ formatPrice(orderSubtotal) }}</strong>
+      <small>Precio mayorista sin costo de envio</small>
     </div>
 
     <div class="summary-actions">
       <button type="button" class="btn-clear" (click)="clearOrder()" [disabled]="orderItems.length === 0">Vaciar</button>
       <button type="button" class="btn-send" (click)="openWhatsAppConfirmModal()" [disabled]="orderItems.length === 0">
-        Enviar pedido
+        Continuar por WhatsApp
       </button>
     </div>
   </footer>
@@ -110,6 +132,11 @@
 
   <section class="wa-confirm-dialog">
     <header class="confirm-top">
+      <div class="confirm-heading">
+        <h2>Confirmar pedido</h2>
+        <p>Completa estos datos para enviar tu solicitud por WhatsApp.</p>
+      </div>
+
       <div class="confirm-options">
         <div class="confirm-option-group" [class.invalid]="submitAttempted && !isPaymentSelected()">
           <p class="group-title">Metodo de pago *</p>
@@ -143,12 +170,12 @@
 
     <div class="confirm-body">
       <div class="confirm-fields">
-        <input type="text" [(ngModel)]="customerName" placeholder="¿Tu Nombre?" [class.invalid-field]="submitAttempted && customerName.trim().length <= 1">
-        <input type="text" [(ngModel)]="customerLastName" placeholder="¿Tu Apellido?" [class.invalid-field]="submitAttempted && customerLastName.trim().length <= 1">
+        <input type="text" [(ngModel)]="customerName" placeholder="Nombre" [class.invalid-field]="submitAttempted && customerName.trim().length <= 1">
+        <input type="text" [(ngModel)]="customerLastName" placeholder="Apellido" [class.invalid-field]="submitAttempted && customerLastName.trim().length <= 1">
         <input
           type="text"
           [(ngModel)]="customerAddress"
-          placeholder="¿Tu Direccion?"
+          placeholder="Direccion de entrega"
           [class.invalid-field]="submitAttempted && isAddressRequired() && customerAddress.trim().length <= 4"
           [disabled]="deliveryMethod === 'retiro'"
         >
@@ -169,7 +196,7 @@
 
     <footer class="confirm-footer">
       <button type="button" class="btn-modal secondary" (click)="closeWhatsAppConfirmModal()">Modificar</button>
-      <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Si, lo quiero!</button>
+      <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Enviar por WhatsApp</button>
     </footer>
   </section>
 </div>

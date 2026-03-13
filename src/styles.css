@@ -9,3 +9,13 @@ body {
 * {
   box-sizing: border-box;
 }
+
+body.wa-modal-open .floating-btn {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .floating-btn {
+    display: none;
+  }
+}

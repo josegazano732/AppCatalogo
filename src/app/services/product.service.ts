@@ -16,7 +16,7 @@ export class ProductService {
       price: 15246,
       wholesale_price: 15246,
       category_name: 'Yerba Mate',
-      image: 'assets/products/don-julian-pack.jpeg',
+      image: 'assets/products/don-julian-nueva.jpeg',
       unit_of_measure: 'pack'
     },
     {
@@ -27,7 +27,7 @@ export class ProductService {
       price: 29887,
       wholesale_price: 29887,
       category_name: 'Yerba Mate',
-      image: 'assets/products/don-julian-pack.jpeg',
+      image: 'assets/products/don-julian-nueva.jpeg',
       unit_of_measure: 'pack'
     },
     {
