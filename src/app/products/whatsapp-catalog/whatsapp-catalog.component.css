@@ -778,15 +778,15 @@ button:disabled {
   }
 
   .wa-summary .floating-btn.summary-floating {
-    position: static;
+    position: relative;
     right: auto;
-    bottom: auto;
+    bottom: 4rem;
     width: 2.35rem;
     height: 2.35rem;
     border-radius: 999px;
     z-index: auto;
     box-shadow: 0 6px 14px rgb(24 39 18 / 25%);
-    transform: translateY(-11px);
+    transform: none;
   }
 
   .wa-summary .floating-instagram.summary-floating {
@@ -794,6 +794,7 @@ button:disabled {
   }
 
   .wa-summary .floating-whatsapp.summary-floating {
+    bottom: 4rem;
     background: #25d366;
   }
 
