@@ -13,8 +13,8 @@ export class ProductService {
       name: 'YM DON JULIAN 10x500g PACK',
       description: 'Yerba mate DON JULIAN pack mayorista 10x500g',
       stock: 100,
-      price: 15246,
-      wholesale_price: 15246,
+      price: 15250,
+      wholesale_price: 15250,
       category_name: 'Yerba Mate',
       image: 'assets/products/don-julian-nueva.jpeg',
       unit_of_measure: 'pack'
@@ -35,8 +35,8 @@ export class ProductService {
       name: 'YM MATEITE 10x500g PACK',
       description: 'Yerba mate MATEITE pack mayorista 10x500g',
       stock: 100,
-      price: 16698,
-      wholesale_price: 16698,
+      price: 16700,
+      wholesale_price: 16700,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM Mateite.jpeg',
       unit_of_measure: 'pack'

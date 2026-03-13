@@ -14,7 +14,74 @@
 
   </header>
 
-  <section class="wa-filters glass-card">
+  <section class="wa-mix-pack glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="mix-copy">
+      <p class="mix-kicker">Pack de incorporacion</p>
+      <h2>Pack Mix 1</h2>
+      <p class="mix-description">
+        Empeza rapido con una seleccion balanceada de yerba tradicional, organica y mate cocido.
+      </p>
+
+      <div class="mix-actions-row">
+        <button
+          type="button"
+          class="btn-mix"
+          (click)="addMixPackOneToCart()"
+          [disabled]="!mixPackOneIsComplete"
+        >
+          <i class="fas fa-layer-group" aria-hidden="true"></i>
+          <span>Agregar Pack Mix 1</span>
+        </button>
+        <p class="mix-total">Total estimado: <strong>{{ formatPrice(mixPackOneTotal) }}</strong></p>
+      </div>
+
+      <p
+        class="mix-feedback"
+        *ngIf="mixPackFeedback"
+        [class.warning]="mixPackFeedbackTone === 'warning'"
+      >
+        {{ mixPackFeedback }}
+      </p>
+    </div>
+
+    <div class="mix-table-wrap" aria-label="Detalle del Pack Mix 1">
+      <table class="mix-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Presentacion</th>
+            <th>Cantidad</th>
+            <th>Subtotal pack</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let mixItem of mixPackOneItems">
+            <td>{{ mixItem.name }}</td>
+            <td>{{ mixItem.presentation }}</td>
+            <td>{{ mixItem.quantity }} pack</td>
+            <td>
+              <strong *ngIf="getMixPackOneItemPrice(mixItem) !== null; else mixNoPrice">
+                {{ formatPrice(getMixPackOneItemPrice(mixItem) || 0) }}
+              </strong>
+              <ng-template #mixNoPrice>
+                <span class="mix-unavailable">No disponible</span>
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wa-state glass-card" *ngIf="isLoading">
+    <p>Cargando productos mayoristas...</p>
+  </section>
+
+  <section class="wa-state glass-card error" *ngIf="errorMessage">
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section class="wa-filters wa-filters-secondary glass-card">
     <label>
       Buscar producto
       <input
@@ -38,14 +105,6 @@
         Mostrando <strong>{{ filteredProducts.length }}</strong> de <strong>{{ products.length }}</strong> productos
       </p>
     </div>
-  </section>
-
-  <section class="wa-state glass-card" *ngIf="isLoading">
-    <p>Cargando productos mayoristas...</p>
-  </section>
-
-  <section class="wa-state glass-card error" *ngIf="errorMessage">
-    <p>{{ errorMessage }}</p>
   </section>
 
   <section class="wa-list glass-card" *ngIf="!isLoading && !errorMessage">

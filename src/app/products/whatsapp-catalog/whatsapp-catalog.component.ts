@@ -6,6 +6,13 @@ import { Product } from '../../models/product.model';
 import { CartService } from '../../services/cart.service';
 import { ProductService } from '../../services/product.service';
 
+interface MixPackItem {
+  name: string;
+  presentation: string;
+  quantity: number;
+  aliases: string[];
+}
+
 @Component({
   selector: 'app-whatsapp-catalog',
   templateUrl: './whatsapp-catalog.component.html',
@@ -41,6 +48,38 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
   customerPostalCode = '';
   paymentMethod = '';
   deliveryMethod = '';
+
+  readonly mixPackOneItems: MixPackItem[] = [
+    {
+      name: 'MC Mate cocido DON JULIAN x20 PACK',
+      presentation: 'Pack x20',
+      quantity: 1,
+      aliases: ['mc mate cocido don julian x20 pack']
+    },
+    {
+      name: 'YM DON JULIAN 10x500g PACK',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym don julian 10x500g pack']
+    },
+    {
+      name: 'YM MATEITE 10x500g PACK',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym mateite 10x500g pack']
+    },
+    {
+      name: 'YM YERBELLA 10x500g PACK',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym yerbella 10x500g pack']
+    }
+  ];
+  mixPackOneTotal = 0;
+  mixPackOneAvailableCount = 0;
+  mixPackOneIsComplete = false;
+  mixPackFeedback = '';
+  mixPackFeedbackTone: 'success' | 'warning' = 'success';
 
   whatsappPhone = '5493758418515';
   whatsappCategories = ['Yerba Mate', 'Mate Cocido'];
@@ -97,10 +136,12 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
           )
         ];
         this.applyFilters();
+        this.refreshMixPackOneAvailability();
         this.isLoading = false;
       },
       error: () => {
         this.errorMessage = 'No se pudo cargar el catalogo mayorista. Intenta nuevamente.';
+        this.refreshMixPackOneAvailability();
         this.isLoading = false;
       }
     });
@@ -182,6 +223,60 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
 
   clearOrder(): void {
     this.cartService.clearCart();
+  }
+
+  addMixPackOneToCart(): void {
+    if (this.products.length === 0 || this.isLoading || this.errorMessage) {
+      this.mixPackFeedbackTone = 'warning';
+      this.mixPackFeedback = 'Todavia no se pueden cargar los productos del mix. Intenta nuevamente en unos segundos.';
+      return;
+    }
+
+    const resolvedProducts: Array<{ mixItem: MixPackItem; product: Product }> = [];
+    const missingItems: string[] = [];
+
+    for (const mixItem of this.mixPackOneItems) {
+      const product = this.findProductForMixItem(mixItem);
+      if (!product) {
+        missingItems.push(mixItem.name);
+        continue;
+      }
+
+      resolvedProducts.push({ mixItem, product });
+    }
+
+    if (missingItems.length > 0) {
+      this.mixPackFeedbackTone = 'warning';
+      this.mixPackFeedback = `No se pudo cargar el Pack Mix 1 completo. Faltan: ${missingItems.join(', ')}.`;
+      return;
+    }
+
+    // Modo exclusivo: al elegir Pack Mix 1 se reemplaza todo el carrito.
+    this.cartService.clearCart();
+
+    for (const resolvedItem of resolvedProducts) {
+      this.cartService.addToCart({
+        id: resolvedItem.product.id,
+        name: resolvedItem.product.name,
+        price: this.getWholesalePrice(resolvedItem.product),
+        quantity: resolvedItem.mixItem.quantity,
+        unit_of_measure: resolvedItem.product.unit_of_measure,
+        category_name: resolvedItem.product.category_name,
+        category: resolvedItem.product.category
+      });
+    }
+
+    this.mixPackFeedbackTone = 'success';
+    this.mixPackFeedback = 'Pack Mix 1 aplicado. El carrito anterior fue reemplazado por este pack.';
+  }
+
+  getMixPackOneItemPrice(mixItem: MixPackItem): number | null {
+    const product = this.findProductForMixItem(mixItem);
+    if (!product) {
+      return null;
+    }
+
+    return this.getWholesalePrice(product) * mixItem.quantity;
   }
 
   openWhatsAppConfirmModal(): void {
@@ -351,6 +446,35 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     }
 
     return 1;
+  }
+
+  private refreshMixPackOneAvailability(): void {
+    let total = 0;
+    let availableCount = 0;
+
+    for (const mixItem of this.mixPackOneItems) {
+      const product = this.findProductForMixItem(mixItem);
+      if (!product) {
+        continue;
+      }
+
+      availableCount += 1;
+      total += this.getWholesalePrice(product) * mixItem.quantity;
+    }
+
+    this.mixPackOneAvailableCount = availableCount;
+    this.mixPackOneTotal = total;
+    this.mixPackOneIsComplete = availableCount === this.mixPackOneItems.length;
+  }
+
+  private findProductForMixItem(mixItem: MixPackItem): Product | undefined {
+    return this.products.find((product: Product) => {
+      const searchable = this.normalizeText(
+        `${product.name} ${product.description ?? ''} ${this.getCategoryLabel(product)}`
+      );
+
+      return mixItem.aliases.some((alias) => searchable.includes(this.normalizeText(alias)));
+    });
   }
 
   private normalizeText(value: string): string {
