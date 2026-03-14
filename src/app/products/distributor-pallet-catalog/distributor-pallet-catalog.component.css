@@ -79,6 +79,17 @@
   margin: 0.25rem 0 0.4rem;
 }
 
+.hero-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hero-title-with-icon i {
+  color: var(--brand-main);
+  font-size: 1.05em;
+}
+
 .wa-hero p {
   margin: 0;
   color: var(--text-soft);
@@ -280,6 +291,98 @@
   color: #9d2f24;
   font-weight: 600;
   font-size: 0.84rem;
+}
+
+.mix-total-note {
+  margin: 0;
+  grid-column: 1 / -1;
+  border-top: 1px solid #d5e2be;
+  padding-top: 0.7rem;
+  color: #2f4a20;
+  font-weight: 500;
+}
+
+.mix-total-note strong {
+  font-weight: 700;
+}
+
+.wa-custom-mix {
+  border-color: #bfd1a0;
+  background:
+    radial-gradient(circle at -10% 120%, rgb(185 217 118 / 26%) 0%, rgb(185 217 118 / 0%) 44%),
+    linear-gradient(140deg, rgb(255 255 255 / 95%) 0%, rgb(246 250 239 / 95%) 58%, rgb(238 245 228 / 95%) 100%);
+}
+
+.custom-format-switch {
+  display: inline-flex;
+  border: 1px solid #c8d8ab;
+  border-radius: 999px;
+  padding: 0.2rem;
+  background: #f7fbeF;
+  gap: 0.2rem;
+}
+
+.custom-format-switch button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  color: #4c6435;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.custom-format-switch button.active {
+  background: linear-gradient(145deg, #74a63a 0%, #5f8f2f 100%);
+  color: #ffffff;
+}
+
+.custom-qty-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.custom-qty-control button {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  border: 1px solid #93ab67;
+  background: #f8faef;
+  cursor: pointer;
+}
+
+.custom-qty-control input {
+  width: 4.2rem;
+  min-height: 34px;
+  border-radius: 8px;
+  border: 1px solid #bfd0a4;
+  text-align: center;
+  font-weight: 700;
+  color: #35501f;
+  background: #ffffff;
+}
+
+.custom-mix-status {
+  margin: 0;
+  border: 1px solid #d7e3c1;
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.9rem;
+  color: #47612f;
+  background: #f7fbef;
+}
+
+.custom-mix-status.warning {
+  border-color: #e2c5a2;
+  color: #85511d;
+  background: #fff7ef;
+}
+
+.custom-mix-status.ok {
+  border-color: #b9d6a8;
+  color: #2f5d1e;
+  background: #f2faeb;
 }
 
 .wa-state {
