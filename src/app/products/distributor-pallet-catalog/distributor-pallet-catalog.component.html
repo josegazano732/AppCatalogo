@@ -231,10 +231,8 @@
         <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
           <h3>{{ product.name }}</h3>
-          <p>Precio Unidad: {{ formatPrice(getUnitPrice(product)) }}</p>
           <p class="sale-suggested">
-            Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
-            <small>(+40% a +50%)</small>
+            Precio neto unidad (sin IVA): {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}
           </p>
           <small>{{ getCategoryLabel(product) }}</small>
         </div>

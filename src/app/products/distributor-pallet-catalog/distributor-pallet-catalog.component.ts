@@ -682,6 +682,10 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
     return this.getWholesalePrice(product) / divisor;
   }
 
+  getUnitNetPriceWithoutTax(product: Product): number {
+    return this.getUnitPrice(product) / 1.21;
+  }
+
   getSuggestedSaleMin(product: Product): number {
     return this.getUnitPrice(product) * 1.4;
   }

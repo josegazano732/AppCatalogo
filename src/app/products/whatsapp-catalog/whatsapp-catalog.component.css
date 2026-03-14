@@ -79,6 +79,17 @@
   margin: 0.25rem 0 0.4rem;
 }
 
+.hero-title-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hero-title-with-icon i {
+  color: var(--brand-main);
+  font-size: 1.05em;
+}
+
 .wa-hero p {
   margin: 0;
   color: var(--text-soft);
