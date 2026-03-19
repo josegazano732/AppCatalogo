@@ -73,6 +73,17 @@ export class ProductService {
       category_name: 'Mate Cocido',
       image: 'assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg',
       unit_of_measure: 'pack'
+    },
+    {
+      id: '7',
+      name: 'YM MATEITE PREMIUM 10x500g PACK',
+      description: 'Yerba mate MATEITE PREMIUM pack mayorista 10x500g',
+      stock: 100,
+      price: 30000,
+      wholesale_price: 30000,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM MATEITE PREMIUM.jpeg',
+      unit_of_measure: 'pack'
     }
   ];
 
