@@ -342,8 +342,8 @@
 
     <div class="confirm-body">
       <div class="confirm-fields">
-        <input type="text" [(ngModel)]="customerName" placeholder="Nombre" [class.invalid-field]="submitAttempted && customerName.trim().length <= 1">
-        <input type="text" [(ngModel)]="customerLastName" placeholder="Apellido" [class.invalid-field]="submitAttempted && customerLastName.trim().length <= 1">
+        <input type="text" [(ngModel)]="customerName" placeholder="Nombre Comercio" [class.invalid-field]="submitAttempted && customerName.trim().length <= 1">
+        <input type="text" [(ngModel)]="customerLastName" placeholder="Apellido y nombre de la persona que hace el pedido" [class.invalid-field]="submitAttempted && customerLastName.trim().length <= 1">
         <input
           type="text"
           [(ngModel)]="customerAddress"

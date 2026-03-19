@@ -630,7 +630,7 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
     const deliveryLabel = this.deliveryMethod === 'domicilio' ? 'Envio a Domicilio' : 'Retiro por Tienda';
 
     const lines: string[] = [
-      'Hola! Quiero realizar un pedido para distribuidora por pallet:',
+      'Hola! Quiero realizar el siguiente pedido por pallet:',
       '',
       ...this.orderItems.map((item) => `${item.quantity} x ${item.name} - ${this.formatPrice(item.price * item.quantity)}`),
       '',

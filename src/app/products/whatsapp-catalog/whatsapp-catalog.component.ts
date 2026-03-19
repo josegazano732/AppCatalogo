@@ -476,7 +476,7 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     const deliveryLabel = this.deliveryMethod === 'domicilio' ? 'Envio a Domicilio' : 'Retiro por Tienda';
 
     const lines: string[] = [
-      'Hola! Quiero realizar un pedido mayorista:',
+      'Hola! Quiero realizar el siguiente pedido:',
       '',
       ...this.orderItems.map((item) => `${item.quantity} x ${item.name} - ${this.formatPrice(item.price * item.quantity)}`),
       '',
