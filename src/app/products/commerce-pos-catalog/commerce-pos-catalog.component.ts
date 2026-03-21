@@ -440,6 +440,14 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     return this.getUnitDivisor(product) > 1 ? 'Precio pack' : 'Precio unidad';
   }
 
+  getDisplayNetPriceLabel(product: Product): string {
+    return this.getUnitDivisor(product) > 1 ? 'Precio pack neto s/IVA' : 'Precio unidad neto s/IVA';
+  }
+
+  getDisplayGrossPriceLabel(product: Product): string {
+    return this.getUnitDivisor(product) > 1 ? 'Precio pack bruto c/IVA' : 'Precio unidad bruto c/IVA';
+  }
+
   getOrderGrossTotal(): number {
     return this.orderSubtotal;
   }
@@ -480,6 +488,15 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
   private getUnitDivisor(product: Product): number {
     const normalizedName = this.normalizeText(product.name);
     const category = this.normalizeText(this.getCategoryLabel(product));
+    const unitOfMeasure = this.normalizeText(product.unit_of_measure || '');
+
+    if (unitOfMeasure.includes('pack') && category.includes('yerba mate')) {
+      return 10;
+    }
+
+    if (unitOfMeasure.includes('pack') && category.includes('mate cocido')) {
+      return 20;
+    }
 
     if (normalizedName.includes('10x500g') || normalizedName.includes('10x1kg')) {
       return 10;

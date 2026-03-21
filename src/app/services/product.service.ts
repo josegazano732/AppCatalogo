@@ -92,80 +92,80 @@ export class ProductService {
   private readonly commercePosExtraProducts: Product[] = [
     {
       id: 'commerce-pos-1',
-      name: 'YM x1000g Caricias de Mate SUAVE',
+      name: 'YM 10x1000g Caricias de Mate SUAVE',
       description: 'Yerba mate Caricias de Mate suave x1000g para comercios y puntos de venta',
       stock: 100,
-      price: 2553.1,
-      wholesale_price: 2553.1,
+      price: 25531,
+      wholesale_price: 25531,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x1000g Caricias de Mate SUAVE.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-2',
-      name: 'YM x1000g Caricias de Mate TRADICIONAL',
+      name: 'YM 10x1000g Caricias de Mate TRADICIONAL',
       description: 'Yerba mate Caricias de Mate tradicional x1000g para comercios y puntos de venta',
       stock: 100,
-      price: 2480.5,
-      wholesale_price: 2480.5,
+      price: 24805,
+      wholesale_price: 24805,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-3',
-      name: 'YM x1000g Mate y Playa TRAD.',
+      name: 'YM 10x1000g Mate y Playa TRAD.',
       description: 'Yerba mate Mate y Playa tradicional x1000g para comercios y puntos de venta',
       stock: 100,
-      price: 2553.1,
-      wholesale_price: 2553.1,
+      price: 25531,
+      wholesale_price: 25531,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-4',
-      name: 'YM x500g Caricias de Mate SUAVE',
+      name: 'YM 10x500g Caricias de Mate SUAVE',
       description: 'Yerba mate Caricias de Mate suave x500g para comercios y puntos de venta',
       stock: 100,
-      price: 1306.8,
-      wholesale_price: 1306.8,
+      price: 13068,
+      wholesale_price: 13068,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x500g Caricias de Mate SUAVE.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-5',
-      name: 'YM x500g Caricias de Mate TRADICIONAL',
+      name: 'YM 10x500g Caricias de Mate TRADICIONAL',
       description: 'Yerba mate Caricias de Mate tradicional x500g para comercios y puntos de venta',
       stock: 100,
-      price: 1270.5,
-      wholesale_price: 1270.5,
+      price: 12705,
+      wholesale_price: 12705,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-6',
-      name: 'YM x500g Mate y Playa TRADICIONAL',
+      name: 'YM 10x500g Mate y Playa TRADICIONAL',
       description: 'Yerba mate Mate y Playa tradicional x500g para comercios y puntos de venta',
       stock: 100,
-      price: 1306.8,
-      wholesale_price: 1306.8,
+      price: 13068,
+      wholesale_price: 13068,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     },
     {
       id: 'commerce-pos-7',
-      name: 'YM x500g Mate y Playa Terere',
+      name: 'YM 10x500g Mate y Playa Terere',
       description: 'Yerba mate Mate y Playa terere x500g para comercios y puntos de venta',
       stock: 100,
-      price: 1391.5,
-      wholesale_price: 1391.5,
+      price: 13915,
+      wholesale_price: 13915,
       category_name: 'Yerba Mate',
       image: 'assets/products/YM x500g Mate y Playa Terere.jpeg',
-      unit_of_measure: 'unidad'
+      unit_of_measure: 'pack'
     }
   ];
 

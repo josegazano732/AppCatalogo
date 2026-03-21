@@ -127,8 +127,8 @@
         <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
           <h3>{{ product.name }}</h3>
-          <p>Precio unidad neto s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</p>
-          <p>Precio unidad bruto c/IVA: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
+          <p>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</p>
+          <p>{{ getDisplayGrossPriceLabel(product) }}: {{ formatPrice(getGrossPrice(product)) }}</p>
           <p class="sale-suggested">
             Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
             <small>(+40% a +50%)</small>
@@ -138,8 +138,8 @@
       </div>
 
       <div class="price-col">
-        <strong>{{ formatPrice(getGrossPrice(product)) }}</strong>
-        <small>{{ getDisplayPriceLabel(product) }} neto s/IVA: {{ formatPrice(getNetPriceWithoutTax(product)) }}</small>
+        <strong>{{ getDisplayGrossPriceLabel(product) }}: {{ formatPrice(getGrossPrice(product)) }}</strong>
+        <small>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</small>
       </div>
 
       <div class="qty-col">
