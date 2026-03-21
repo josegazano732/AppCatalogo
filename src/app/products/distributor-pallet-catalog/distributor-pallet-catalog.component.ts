@@ -242,12 +242,12 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
   }
 
   addOrder(product: Product): void {
-    const unitPrice = this.getWholesalePrice(product);
+    const palletPrice = this.getPalletPrice(product);
 
     this.cartService.addToCart({
       id: product.id,
       name: product.name,
-      price: unitPrice,
+      price: palletPrice,
       quantity: 1,
       unit_of_measure: product.unit_of_measure,
       category_name: product.category_name,
@@ -723,13 +723,23 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
   private toDistributorProduct(product: Product): Product {
     const normalizedName = this.normalizeText(product.name);
     let distributorName = product.name;
-    const distributorWholesalePrice = this.resolveDistributorWholesalePrice(normalizedName);
+    const distributorWholesalePrice = this.resolveDistributorWholesalePrice(product, normalizedName);
 
     if (normalizedName.includes('don julian') && normalizedName.includes('10x500g')) {
       distributorName = 'YM DON JULIAN 500g PALLET x96 PACK';
     } else if (normalizedName.includes('don julian') && normalizedName.includes('10x1kg')) {
       distributorName = 'YM DON JULIAN 1kg PALLET x50 PACK';
-    } else if (normalizedName.includes('mateite') && normalizedName.includes('10x500g')) {
+    } else if (
+      normalizedName.includes('mateite')
+      && normalizedName.includes('premium')
+      && (normalizedName.includes('10x500g') || normalizedName.includes('500g'))
+    ) {
+      distributorName = 'YM MATEITE PREMIUM 500g PALLET x75 PACK';
+    } else if (
+      normalizedName.includes('mateite')
+      && normalizedName.includes('10x500g')
+      && !normalizedName.includes('premium')
+    ) {
       distributorName = 'YM MATEITE 500g PALLET x96 PACK';
     } else if (normalizedName.includes('mateite') && normalizedName.includes('10x1kg')) {
       distributorName = 'YM MATEITE 1kg PALLET x50 PACK';
@@ -746,9 +756,17 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
     };
   }
 
-  private resolveDistributorWholesalePrice(normalizedName: string): number {
+  private resolveDistributorWholesalePrice(product: Product, normalizedName: string): number {
     if (normalizedName.includes('mate cocido') && normalizedName.includes('x20')) {
       return 790 * 20;
+    }
+
+    if (
+      normalizedName.includes('mateite')
+      && normalizedName.includes('premium')
+      && (normalizedName.includes('10x500g') || normalizedName.includes('500g'))
+    ) {
+      return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
     }
 
     if (normalizedName.includes('don julian') && normalizedName.includes('10x1kg')) {
@@ -767,11 +785,15 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
       return 1270.5 * 10;
     }
 
-    if (normalizedName.includes('mateite') && normalizedName.includes('10x500g')) {
+    if (
+      normalizedName.includes('mateite')
+      && normalizedName.includes('10x500g')
+      && !normalizedName.includes('premium')
+    ) {
       return 1391.5 * 10;
     }
 
-    return 0;
+    return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
   }
 
   private initializeCustomMixQuantities(): void {

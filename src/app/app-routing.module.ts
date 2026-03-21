@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
+import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { WhatsappCatalogComponent } from './products/whatsapp-catalog/whatsapp-catalog.component';
 
@@ -8,6 +9,10 @@ const routes: Routes = [
   {
     path: '',
     component: WhatsappCatalogComponent
+  },
+  {
+    path: 'catalogo-comercios-punto-de-ventas',
+    component: CommercePosCatalogComponent
   },
   {
     path: 'catalogo-distribuidora-pallet',
