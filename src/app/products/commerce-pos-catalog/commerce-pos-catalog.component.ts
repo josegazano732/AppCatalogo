@@ -19,6 +19,23 @@ interface MixPackItem {
   styleUrls: ['../whatsapp-catalog/whatsapp-catalog.component.css']
 })
 export class CommercePosCatalogComponent implements OnInit, OnDestroy {
+  private readonly productDisplayOrder: string[] = [
+    'MC Mate cocido DON JULIAN x20 PACK',
+    'YM DON JULIAN 10x500g PACK',
+    'YM DON JULIAN Pack 10x1kg PACK',
+    'YM YERBELLA 10x500g PACK',
+    'YM MATEITE 10x500g PACK',
+    'YM MATEITE 10x1kg PACK',
+    'YM MATEITE PREMIUM 10x500g PACK',
+    'YM 10x500g Caricias de Mate SUAVE',
+    'YM 10x1000g Caricias de Mate SUAVE',
+    'YM 10x500g Caricias de Mate TRADICIONAL',
+    'YM 10x1000g Caricias de Mate TRADICIONAL',
+    'YM 10x500g Mate y Playa TRADICIONAL',
+    'YM 10x1000g Mate y Playa TRAD.',
+    'YM 10x500g Mate y Playa Terere'
+  ];
+
   products: Product[] = [];
   filteredProducts: Product[] = [];
   displayedProducts: Product[] = [];
@@ -131,13 +148,7 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
         const wholesaleProducts = products
           .filter((product: Product) => (product.wholesale_price ?? 0) > 0)
           .filter((product: Product) => enabledCategories.has(this.normalizeText(this.getCategoryLabel(product))))
-          .sort((a: Product, b: Product) => {
-            const categoryDiff = this.getCategoryLabel(a).localeCompare(this.getCategoryLabel(b), 'es');
-            if (categoryDiff !== 0) {
-              return categoryDiff;
-            }
-            return a.name.localeCompare(b.name, 'es');
-          });
+          .sort((a: Product, b: Product) => this.getProductSortRank(a) - this.getProductSortRank(b));
 
         this.products = wholesaleProducts;
         this.categories = [
@@ -448,6 +459,10 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     return this.getUnitDivisor(product) > 1 ? 'Precio pack bruto c/IVA' : 'Precio unidad bruto c/IVA';
   }
 
+  isPackProduct(product: Product): boolean {
+    return this.getUnitDivisor(product) > 1;
+  }
+
   getOrderGrossTotal(): number {
     return this.orderSubtotal;
   }
@@ -515,6 +530,11 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     }
 
     return 1;
+  }
+
+  private getProductSortRank(product: Product): number {
+    const index = this.productDisplayOrder.indexOf(product.name);
+    return index >= 0 ? index : this.productDisplayOrder.length;
   }
 
   private refreshMixPackOneAvailability(): void {

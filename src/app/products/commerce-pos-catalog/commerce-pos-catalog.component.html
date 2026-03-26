@@ -127,8 +127,12 @@
         <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
           <h3>{{ product.name }}</h3>
-          <p>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</p>
-          <p>{{ getDisplayGrossPriceLabel(product) }}: {{ formatPrice(getGrossPrice(product)) }}</p>
+          <details>
+            <summary>Ver detalle de precios</summary>
+            <p>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</p>
+            <p>Precio unitario s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</p>
+          </details>
+          <p *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
           <p class="sale-suggested">
             Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
             <small>(+40% a +50%)</small>
@@ -139,7 +143,7 @@
 
       <div class="price-col">
         <strong>{{ getDisplayGrossPriceLabel(product) }}: {{ formatPrice(getGrossPrice(product)) }}</strong>
-        <small>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</small>
+        <small *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</small>
       </div>
 
       <div class="qty-col">
