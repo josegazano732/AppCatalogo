@@ -80,28 +80,46 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
       aliases: ['ym don julian 10x500g pack']
     },
     {
-      name: 'YM DON JULIAN Pack 10x1kg PACK',
-      presentation: '10 x 1 kg',
-      quantity: 1,
-      aliases: ['ym don julian pack 10x1kg pack']
-    },
-    {
       name: 'YM MATEITE 10x500g PACK',
       presentation: '10 x 500 g',
       quantity: 1,
       aliases: ['ym mateite 10x500g pack']
     },
     {
-      name: 'YM MATEITE 10x1kg PACK',
-      presentation: '10 x 1 kg',
-      quantity: 1,
-      aliases: ['ym mateite 10x1kg pack']
-    },
-    {
       name: 'YM YERBELLA 10x500g PACK',
       presentation: '10 x 500 g',
       quantity: 1,
       aliases: ['ym yerbella 10x500g pack']
+    },
+    {
+      name: 'YM MATEITE PREMIUM 10x500g PACK',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym mateite premium 10x500g pack']
+    },
+    {
+      name: 'YM 10x500g Caricias de Mate SUAVE',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym 10x500g caricias de mate suave']
+    },
+    {
+      name: 'YM 10x500g Caricias de Mate TRADICIONAL',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym 10x500g caricias de mate tradicional']
+    },
+    {
+      name: 'YM 10x500g Mate y Playa TRADICIONAL',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym 10x500g mate y playa tradicional']
+    },
+    {
+      name: 'YM 10x500g Mate y Playa Terere',
+      presentation: '10 x 500 g',
+      quantity: 1,
+      aliases: ['ym 10x500g mate y playa terere']
     }
   ];
   mixPackOneTotal = 0;
