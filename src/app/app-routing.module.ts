@@ -4,6 +4,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { WhatsappCatalogComponent } from './products/whatsapp-catalog/whatsapp-catalog.component';
+import { WholesaleCatalogComponent } from './products/wholesale-catalog/wholesale-catalog.component';
 
 const routes: Routes = [
   {
@@ -25,8 +26,7 @@ const routes: Routes = [
   },
   {
     path: 'catalogo-mayorista',
-    redirectTo: '',
-    pathMatch: 'full'
+    component: WholesaleCatalogComponent
   },
   {
     path: 'catalogo-whatsapp',

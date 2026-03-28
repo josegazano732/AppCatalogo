@@ -7,9 +7,16 @@ import { AppComponent } from './app.component';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { WhatsappCatalogComponent } from './products/whatsapp-catalog/whatsapp-catalog.component';
+import { WholesaleCatalogComponent } from './products/wholesale-catalog/wholesale-catalog.component';
 
 @NgModule({
-  declarations: [AppComponent, WhatsappCatalogComponent, DistributorPalletCatalogComponent, CommercePosCatalogComponent],
+  declarations: [
+    AppComponent,
+    WhatsappCatalogComponent,
+    DistributorPalletCatalogComponent,
+    CommercePosCatalogComponent,
+    WholesaleCatalogComponent
+  ],
   imports: [BrowserModule, FormsModule, AppRoutingModule],
   providers: [],
   bootstrap: [AppComponent]

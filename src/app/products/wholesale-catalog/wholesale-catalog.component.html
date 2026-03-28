@@ -4,7 +4,7 @@
       <p class="hero-kicker">AMATE Pedidos</p>
       <h1 class="hero-title-with-icon">
         <i class="fas fa-store" aria-hidden="true"></i>
-        <span>Catalogo - COMERCIOS y PUNTO DE VENTAS</span>
+        <span>Catalogo - MAYORISTA</span>
       </h1>
     </div>
 
@@ -13,67 +13,7 @@
         <img class="hero-logo" src="assets/branding/amate-logo.jpg" alt="Logo de APP-Mate">
       </div>
     </div>
-
   </header>
-
-  <section class="wa-mix-pack glass-card" *ngIf="!isLoading && !errorMessage">
-    <div class="mix-copy">
-      <p class="mix-kicker">Pack de incorporacion</p>
-      <h2>Pack Mix 1</h2>
-      <p class="mix-description">
-        Incluye 1 pack de cada variedad para que arranques con un stock completo y listo para vender desde el primer día.
-      </p>
-
-      <div class="mix-actions-row">
-        <button
-          type="button"
-          class="btn-mix"
-          (click)="addMixPackOneToCart()"
-          [disabled]="!mixPackOneIsComplete"
-        >
-          <i class="fas fa-layer-group" aria-hidden="true"></i>
-          <span>Agregar Pack Mix 1</span>
-        </button>
-        <p class="mix-total">Total estimado: <strong>{{ formatPrice(mixPackOneTotal) }}</strong></p>
-      </div>
-
-      <p
-        class="mix-feedback"
-        *ngIf="mixPackFeedback"
-        [class.warning]="mixPackFeedbackTone === 'warning'"
-      >
-        {{ mixPackFeedback }}
-      </p>
-    </div>
-
-    <div class="mix-table-wrap" aria-label="Detalle del Pack Mix 1">
-      <table class="mix-table">
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Presentacion</th>
-            <th>Cantidad</th>
-            <th>Subtotal pack</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let mixItem of mixPackOneItems">
-            <td>{{ mixItem.name }}</td>
-            <td>{{ mixItem.presentation }}</td>
-            <td>{{ mixItem.quantity }} pack</td>
-            <td>
-              <strong *ngIf="getMixPackOneItemPrice(mixItem) !== null; else mixNoPrice">
-                {{ formatPrice(getMixPackOneItemPrice(mixItem) || 0) }}
-              </strong>
-              <ng-template #mixNoPrice>
-                <span class="mix-unavailable">No disponible</span>
-              </ng-template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
 
   <section class="wa-state glass-card" *ngIf="isLoading">
     <p>Cargando productos mayoristas...</p>
@@ -181,8 +121,8 @@
 
     <div class="summary-amount">
       <p>Total estimado</p>
-      <strong>{{ formatPrice(getOrderGrossTotal()) }}</strong>
-      <small>Neto s/IVA: {{ formatPrice(getOrderNetTotal()) }}</small>
+      <strong>{{ formatPrice(orderSubtotal) }}</strong>
+      <small>Neto s/IVA: {{ formatPrice(orderSubtotal / 1.21) }}</small>
       <small>Bruto c/IVA incluido, sin costo de envio</small>
     </div>
 
