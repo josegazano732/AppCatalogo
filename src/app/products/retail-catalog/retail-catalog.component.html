@@ -1,0 +1,210 @@
+<section class="wa-catalog-page">
+  <header class="wa-hero glass-card">
+    <div>
+      <p class="hero-kicker">AMATE Pedidos</p>
+      <h1 class="hero-title-with-icon">
+        <i class="fas fa-store" aria-hidden="true"></i>
+        <span>Catalogo - MINORISTA</span>
+      </h1>
+    </div>
+
+    <div class="hero-logo-shell" aria-hidden="true">
+      <div class="hero-logo-ring">
+        <img class="hero-logo" src="assets/branding/amate-logo.jpg" alt="Logo de APP-Mate">
+      </div>
+    </div>
+  </header>
+
+  <section class="wa-state glass-card" *ngIf="isLoading">
+    <p>Cargando productos minoristas...</p>
+  </section>
+
+  <section class="wa-state glass-card error" *ngIf="errorMessage">
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section class="wa-filters wa-filters-secondary glass-card">
+    <label>
+      Buscar producto
+      <input
+        type="text"
+        placeholder="Ej: Yerba suave, organica, cocido..."
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applyFilters()"
+      >
+    </label>
+
+    <label>
+      Categoria
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
+        <option value="">Todas las categorias</option>
+        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+      </select>
+    </label>
+
+    <div class="filters-meta" aria-live="polite">
+      <p>
+        Mostrando <strong>{{ filteredProducts.length }}</strong> de <strong>{{ products.length }}</strong> productos
+      </p>
+    </div>
+  </section>
+
+  <section class="wa-list glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="list-header">
+      <span>Producto</span>
+      <span>{{ getPriceColumnLabel() }}</span>
+      <span>Cantidad</span>
+      <span>Agregar</span>
+    </div>
+
+    <article class="list-row" *ngFor="let product of displayedProducts">
+      <div class="product-main">
+        <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
+        <div class="product-text">
+          <h3>{{ product.name }}</h3>
+          <details>
+            <summary>Ver detalle de precios</summary>
+            <p>{{ getDisplayNetPriceLabel() }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</p>
+          </details>
+          <small>{{ getCategoryLabel(product) }}</small>
+        </div>
+      </div>
+
+      <div class="price-col">
+        <strong>{{ getDisplayGrossPriceLabel() }}: {{ formatPrice(getGrossPrice(product)) }}</strong>
+      </div>
+
+      <div class="qty-col">
+        <button type="button" (click)="decreaseOrder(product)" [disabled]="getProductQuantity(product.id) === 0" aria-label="Quitar una unidad">-</button>
+        <span>{{ getProductQuantity(product.id) }}</span>
+        <button type="button" (click)="increaseOrder(product)" aria-label="Sumar una unidad">+</button>
+      </div>
+
+      <div class="action-col">
+        <button type="button" class="btn-add" (click)="addOrder(product)">Agregar 1</button>
+      </div>
+    </article>
+
+    <div class="empty" *ngIf="filteredProducts.length === 0">
+      <p>No encontramos productos con esos filtros.</p>
+      <small>Prueba con otra palabra o selecciona "Todas las categorias".</small>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button type="button" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">Anterior</button>
+      <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+      <button type="button" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">Siguiente</button>
+    </div>
+  </section>
+
+  <footer class="wa-summary glass-card" *ngIf="!isLoading && !errorMessage">
+    <div class="summary-cart-pill">
+      <i class="fas fa-shopping-basket"></i>
+      <span>{{ orderCount }} unidades en tu pedido</span>
+    </div>
+
+    <div class="summary-social" aria-label="Redes y contacto rapido">
+      <a class="floating-btn floating-whatsapp summary-floating" href="https://wa.me/5493758418515" target="_blank" rel="noreferrer" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+      </a>
+      <a class="floating-btn floating-instagram summary-floating" href="https://www.instagram.com/amate.todala.vida.yerbas?igsh=OXFvd2VnMm1wcW4z" target="_blank" rel="noreferrer" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
+    </div>
+
+    <div class="summary-amount">
+      <p>Total estimado</p>
+      <strong>{{ formatPrice(orderSubtotal) }}</strong>
+      <small>Neto s/IVA: {{ formatPrice(orderSubtotal / 1.21) }}</small>
+      <small>Bruto c/IVA incluido, sin costo de envio</small>
+    </div>
+
+    <div class="summary-actions">
+      <button type="button" class="btn-clear" (click)="clearOrder()" [disabled]="orderItems.length === 0">
+        <i class="fas fa-trash" aria-hidden="true"></i>
+        <span>Vaciar</span>
+      </button>
+      <button type="button" class="btn-send" (click)="openWhatsAppConfirmModal()" [disabled]="orderItems.length === 0">
+        Continuar por WhatsApp
+      </button>
+    </div>
+  </footer>
+</section>
+
+<div class="wa-confirm-modal" *ngIf="showWhatsAppConfirmModal">
+  <div class="wa-confirm-backdrop" (click)="closeWhatsAppConfirmModal()"></div>
+
+  <section class="wa-confirm-dialog">
+    <header class="confirm-top">
+      <div class="confirm-heading">
+        <h2>Confirmar operatoria</h2>
+        <p>Completa estos datos para enviar y registrar esta operacion.</p>
+      </div>
+
+      <div class="confirm-options">
+        <div class="confirm-option-group" [class.invalid]="submitAttempted && !isPointOfSaleOriginSelected()">
+          <p class="group-title">Origen del punto de venta *</p>
+          <label>
+            <input type="radio" name="pointOfSaleOrigin" value="AMAL ESTETICA" [(ngModel)]="pointOfSaleOrigin">
+            AMAL ESTETICA
+          </label>
+          <label>
+            <input type="radio" name="pointOfSaleOrigin" value="AMAL GYM" [(ngModel)]="pointOfSaleOrigin">
+            AMAL GYM
+          </label>
+          <label>
+            <input type="radio" name="pointOfSaleOrigin" value="AMATE OFICINA" [(ngModel)]="pointOfSaleOrigin">
+            AMATE OFICINA
+          </label>
+        </div>
+
+        <div class="confirm-option-group" [class.invalid]="submitAttempted && !isPaymentSelected()">
+          <p class="group-title">Metodo de pago *</p>
+          <label>
+            <input type="radio" name="paymentMethod" value="efectivo" [(ngModel)]="paymentMethod">
+            Pago en Efectivo
+          </label>
+          <label>
+            <input type="radio" name="paymentMethod" value="transferencia" [(ngModel)]="paymentMethod">
+            Pago por Transferencia
+          </label>
+          <label>
+            <input type="radio" name="paymentMethod" value="bonificacion-promocional" [(ngModel)]="paymentMethod">
+            Bonificacion Promocional
+          </label>
+        </div>
+      </div>
+
+      <button type="button" class="close-confirm" (click)="closeWhatsAppConfirmModal()" aria-label="Cerrar">
+        <i class="fas fa-times"></i>
+      </button>
+    </header>
+
+    <div class="confirm-body">
+      <div class="confirm-fields">
+        <textarea
+          [(ngModel)]="observation"
+          placeholder="Observacion: bonificada, entrega promocional u otro detalle"
+          rows="4"
+        ></textarea>
+      </div>
+
+      <div class="confirm-order">
+        <h3>Pedido</h3>
+        <ul>
+          <li *ngFor="let item of orderItems">
+            {{ item.quantity }} {{ item.name }} ( {{ formatPrice(item.price * item.quantity) }} )
+          </li>
+        </ul>
+        <p class="confirm-total">Total: {{ formatPrice(orderSubtotal) }}</p>
+      </div>
+
+      <p class="confirm-error" *ngIf="confirmError">{{ confirmError }}</p>
+    </div>
+
+    <footer class="confirm-footer">
+      <button type="button" class="btn-modal secondary" (click)="closeWhatsAppConfirmModal()">Modificar</button>
+      <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Enviar por WhatsApp</button>
+    </footer>
+  </section>
+</div>

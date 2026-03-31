@@ -315,6 +315,163 @@ export class ProductService {
     }
   ];
 
+  private readonly retailCatalogProducts: Product[] = [
+    {
+      id: 'retail-1',
+      name: 'Mate cocido Don Julian 25Ux2 G.',
+      description: 'Mate cocido Don Julian 25 unidades x 2 g para catalogo minorista',
+      stock: 100,
+      price: 1100,
+      wholesale_price: 1100,
+      category_name: 'Mate Cocido',
+      image: 'assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-2',
+      name: 'YM x1000g Caricias de Mate SUAVE',
+      description: 'Yerba mate Caricias de Mate suave x1000g para catalogo minorista',
+      stock: 100,
+      price: 2892,
+      wholesale_price: 2892,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x1000g Caricias de Mate SUAVE.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-3',
+      name: 'YM x1000g Caricias de Mate TRADICIONAL',
+      description: 'Yerba mate Caricias de Mate tradicional x1000g para catalogo minorista',
+      stock: 100,
+      price: 2820,
+      wholesale_price: 2820,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-4',
+      name: 'YM x1000g Don Julian',
+      description: 'Yerba mate Don Julian x1000g para catalogo minorista',
+      stock: 100,
+      price: 3449,
+      wholesale_price: 3449,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/don-julian-nueva.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-5',
+      name: 'YM x1000g Mate y Playa TRAD.',
+      description: 'Yerba mate Mate y Playa tradicional x1000g para catalogo minorista',
+      stock: 100,
+      price: 2892,
+      wholesale_price: 2892,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-6',
+      name: 'YM x1000g Mateite',
+      description: 'Yerba mate Mateite x1000g para catalogo minorista',
+      stock: 100,
+      price: 3788,
+      wholesale_price: 3788,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM Mateite.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-7',
+      name: 'YM x500 Yerbella ORGANICA',
+      description: 'Yerba mate Yerbella organica x500g para catalogo minorista',
+      stock: 100,
+      price: 3800.01,
+      wholesale_price: 3800.01,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM Yerbella x500.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-8',
+      name: 'YM x500g Caricias de Mate SUAVE',
+      description: 'Yerba mate Caricias de Mate suave x500g para catalogo minorista',
+      stock: 100,
+      price: 1476,
+      wholesale_price: 1476,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x500g Caricias de Mate SUAVE.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-9',
+      name: 'YM x500g Caricias de Mate TRADICIONAL',
+      description: 'Yerba mate Caricias de Mate tradicional x500g para catalogo minorista',
+      stock: 100,
+      price: 1440,
+      wholesale_price: 1440,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-10',
+      name: 'YM x500g Don Julian',
+      description: 'Yerba mate Don Julian x500g para catalogo minorista',
+      stock: 100,
+      price: 1755,
+      wholesale_price: 1755,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/don-julian-nueva.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-11',
+      name: 'YM x500g Mate y Playa TRADICIONAL',
+      description: 'Yerba mate Mate y Playa tradicional x500g para catalogo minorista',
+      stock: 100,
+      price: 1480,
+      wholesale_price: 1480,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-12',
+      name: 'YM x500g Mate y Playa Terere',
+      description: 'Yerba mate Mate y Playa terere x500g para catalogo minorista',
+      stock: 100,
+      price: 1560,
+      wholesale_price: 1560,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM x500g Mate y Playa Terere.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-13',
+      name: 'YM x500g Mateite',
+      description: 'Yerba mate Mateite x500g para catalogo minorista',
+      stock: 100,
+      price: 1925,
+      wholesale_price: 1925,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM Mateite.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'retail-14',
+      name: 'YM x500g Mateite PREMIUM',
+      description: 'Yerba mate Mateite Premium x500g para catalogo minorista',
+      stock: 100,
+      price: 4199.99,
+      wholesale_price: 4199.99,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/YM MATEITE PREMIUM.jpeg',
+      unit_of_measure: 'unidad'
+    }
+  ];
+
   getProducts(): Observable<Product[]> {
     return of(this.cloneProducts(this.baseProducts));
   }
@@ -325,6 +482,10 @@ export class ProductService {
 
   getWholesaleCatalogProducts(): Observable<Product[]> {
     return of(this.cloneProducts(this.wholesaleCatalogProducts));
+  }
+
+  getRetailCatalogProducts(): Observable<Product[]> {
+    return of(this.cloneProducts(this.retailCatalogProducts));
   }
 
   private cloneProducts(products: Product[]): Product[] {
