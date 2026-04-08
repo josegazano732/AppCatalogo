@@ -23,6 +23,8 @@ export class CartService {
     const existing = currentCart.find((cartItem) => cartItem.id === item.id);
 
     if (existing) {
+      existing.price = item.price;
+      existing.discount_percent = item.discount_percent;
       existing.quantity += item.quantity;
     } else {
       currentCart.push({ ...item });
@@ -44,6 +46,22 @@ export class CartService {
         };
       })
       .filter((item) => item.quantity > 0);
+
+    this.persistCart(updated);
+  }
+
+  updateItemPricing(productId: string, price: number, discountPercent?: number): void {
+    const updated = this.cartSubject.value.map((item) => {
+      if (item.id !== productId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        price,
+        discount_percent: discountPercent
+      };
+    });
 
     this.persistCart(updated);
   }

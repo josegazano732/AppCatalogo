@@ -1,0 +1,213 @@
+<section class="wa-catalog-page holowaty-page">
+  <header class="wa-hero glass-card holowaty-hero">
+    <div>
+      <p class="hero-kicker">Holowaty</p>
+      <h1 class="hero-title-with-icon">
+        <i class="fas fa-seedling" aria-hidden="true"></i>
+        <span>Catalogo</span>
+      </h1>
+      <div class="hero-copy holowaty-company-block">
+        <p>ELABORADO Y ENVASADO POR</p>
+        <strong>Holowaty Hugo Oscar</strong>
+        <p>Ruta provincial 105 - Lote agricola N 57</p>
+        <p>Cel: (3758) 15 433581</p>
+      </div>
+    </div>
+
+    <div class="hero-logo-shell" aria-hidden="true">
+      <div class="hero-logo-ring">
+        <img class="hero-logo" src="assets/branding/holowaty-logo.jpeg" alt="Logo de Holowaty">
+      </div>
+    </div>
+  </header>
+
+  <section class="wa-state glass-card" *ngIf="isLoading">
+    <p>Cargando catalogo...</p>
+  </section>
+
+  <section class="wa-state glass-card error" *ngIf="errorMessage">
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section class="wa-filters wa-filters-secondary glass-card holowaty-filters">
+    <label>
+      Buscar producto o codigo
+      <input
+        type="text"
+        placeholder="Ej: 1001, Yerupe, 1 kg..."
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="applyFilters()"
+      >
+    </label>
+
+    <label>
+      Categoria
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
+        <option value="">Todas las categorias</option>
+        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+      </select>
+    </label>
+
+    <div class="filters-meta" aria-live="polite">
+      <p>
+        Mostrando <strong>{{ filteredProducts.length }}</strong> de <strong>{{ products.length }}</strong> productos
+      </p>
+    </div>
+  </section>
+
+  <section class="wa-list glass-card holowaty-list" *ngIf="!isLoading && !errorMessage">
+    <div class="list-header holowaty-list-header">
+      <span>Producto</span>
+      <span>Unitario</span>
+      <span>Descuento Comercial</span>
+      <span>Neto</span>
+      <span>Cantidad</span>
+      <span>Agregar</span>
+    </div>
+
+    <article class="list-row holowaty-row" *ngFor="let product of displayedProducts">
+      <div class="product-main">
+        <img *ngIf="product.image" class="product-thumb holowaty-thumb" [src]="product.image" [alt]="product.name">
+        <div class="product-text">
+          <div class="holowaty-badges">
+            <span class="holowaty-badge">{{ product.brand }}</span>
+            <span class="holowaty-badge secondary">Cod. {{ product.sku }}</span>
+          </div>
+          <h3>{{ product.name }}</h3>
+          <p class="holowaty-product-copy">{{ product.description }}</p>
+          <details>
+            <summary>Ver ficha comercial</summary>
+            <p *ngIf="getCommercialDiscountPercent(product) > 0">
+              Descuento comercial: {{ getCommercialDiscountPercent(product) }}%
+            </p>
+            <p>Neto: {{ formatPrice(getDiscountedNetPrice(product)) }}</p>
+            <p>IVA: {{ getTaxRate(product) * 100 }}%</p>
+            <p>Precio por kilo: {{ formatPrice(getPricePerKilo(product)) }}</p>
+            <p>Bultos por pallet: {{ getPalletUnits(product) }}</p>
+          </details>
+          <small>{{ getCategoryLabel(product) }}</small>
+        </div>
+      </div>
+
+      <div class="price-col holowaty-unit-price-col">
+        <strong>{{ formatPrice(getNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="discount-col holowaty-discount-col">
+        <label class="holowaty-discount-field">
+          <input
+            type="text"
+            inputmode="decimal"
+            maxlength="5"
+            [ngModel]="getCommercialDiscountInputValue(product)"
+            (ngModelChange)="onCommercialDiscountChange(product, $event)"
+            aria-label="Descuento comercial en porcentaje"
+          >
+          <span>%</span>
+        </label>
+      </div>
+
+      <div class="price-col holowaty-price-col">
+        <strong>{{ formatPrice(getDiscountedNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="qty-col">
+        <button type="button" (click)="decreaseOrder(product)" [disabled]="getProductQuantity(product.id) === 0" aria-label="Quitar una unidad">-</button>
+        <span>{{ getProductQuantity(product.id) }}</span>
+        <button type="button" (click)="increaseOrder(product)" aria-label="Sumar una unidad">+</button>
+      </div>
+
+      <div class="action-col">
+        <button type="button" class="btn-add holowaty-add" (click)="addOrder(product)">Agregar 1</button>
+      </div>
+    </article>
+
+    <div class="empty" *ngIf="filteredProducts.length === 0">
+      <p>No encontramos productos con esos filtros.</p>
+      <small>Prueba con otra marca, codigo o presentacion.</small>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button type="button" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">Anterior</button>
+      <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+      <button type="button" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">Siguiente</button>
+    </div>
+  </section>
+
+  <footer class="wa-summary glass-card holowaty-summary" *ngIf="!isLoading && !errorMessage">
+    <div class="summary-cart-pill">
+      <i class="fas fa-shopping-basket"></i>
+      <span>{{ orderCount }} unidades en la solicitud</span>
+    </div>
+
+    <div class="summary-amount">
+      <p>Total neto estimado</p>
+      <strong>{{ formatPrice(orderSubtotal) }}</strong>
+      <small>Descuento comercial aplicado por producto</small>
+      <small>Valores calculados sobre precio neto</small>
+    </div>
+
+    <div class="summary-actions">
+      <button type="button" class="btn-clear" (click)="clearOrder()" [disabled]="orderItems.length === 0">
+        <i class="fas fa-trash" aria-hidden="true"></i>
+        <span>Vaciar</span>
+      </button>
+      <button type="button" class="btn-send holowaty-send" (click)="openWhatsAppConfirmModal()" [disabled]="orderItems.length === 0">
+        Solicitar por WhatsApp
+      </button>
+    </div>
+  </footer>
+</section>
+
+<div class="wa-confirm-modal" *ngIf="showWhatsAppConfirmModal">
+  <div class="wa-confirm-backdrop" (click)="closeWhatsAppConfirmModal()"></div>
+
+  <section class="wa-confirm-dialog holowaty-dialog">
+    <header class="confirm-top">
+      <div class="confirm-heading">
+        <h2>Confirmar solicitud</h2>
+        <p>Completa los datos comerciales para enviar el pedido Holowaty.</p>
+      </div>
+
+      <button type="button" class="close-confirm" (click)="closeWhatsAppConfirmModal()" aria-label="Cerrar">
+        <i class="fas fa-times"></i>
+      </button>
+    </header>
+
+    <div class="confirm-body">
+      <div class="confirm-fields holowaty-confirm-fields">
+        <input
+          type="text"
+          [(ngModel)]="customerBusinessName"
+          placeholder="Razon social"
+          [class.invalid-field]="submitAttempted && customerBusinessName.trim().length <= 1"
+        >
+        <input
+          type="text"
+          [(ngModel)]="customerContactName"
+          placeholder="Nombre de contacto"
+          [class.invalid-field]="submitAttempted && customerContactName.trim().length <= 1"
+        >
+        <input type="text" [(ngModel)]="customerPhone" placeholder="Telefono o celular">
+        <textarea [(ngModel)]="observation" placeholder="Observaciones comerciales" rows="4"></textarea>
+      </div>
+
+      <div class="confirm-order">
+        <h3>Solicitud</h3>
+        <ul>
+          <li *ngFor="let item of orderItems">
+            {{ item.quantity }} {{ item.name }} ( {{ formatPrice(item.price * item.quantity) }} )
+          </li>
+        </ul>
+        <p class="confirm-total">Total: {{ formatPrice(orderSubtotal) }}</p>
+      </div>
+
+      <p class="confirm-error" *ngIf="confirmError">{{ confirmError }}</p>
+    </div>
+
+    <footer class="confirm-footer">
+      <button type="button" class="btn-modal secondary" (click)="closeWhatsAppConfirmModal()">Modificar</button>
+      <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Enviar por WhatsApp</button>
+    </footer>
+  </section>
+</div>

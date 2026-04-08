@@ -10,4 +10,11 @@ export interface Product {
   category_name?: string;
   category?: string;
   unit_of_measure?: string;
+  sku?: string;
+  brand?: string;
+  pallet_units?: number;
+  price_per_kilo?: number;
+  unit_net_price?: number;
+  net_price?: number;
+  tax_rate?: number;
 }

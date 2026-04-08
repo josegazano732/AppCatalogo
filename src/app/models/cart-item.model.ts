@@ -6,4 +6,5 @@ export interface CartItem {
   unit_of_measure?: string;
   category_name?: string;
   category?: string;
+  discount_percent?: number;
 }

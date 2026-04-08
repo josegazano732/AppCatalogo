@@ -472,6 +472,153 @@ export class ProductService {
     }
   ];
 
+  private readonly holowatyCatalogProducts: Product[] = [
+    {
+      id: 'holowaty-1001',
+      sku: '1001',
+      brand: 'YERUPE',
+      name: 'YERUPE Yerba Mate 500 g',
+      description: 'Yerba mate YERUPE de 500 g.',
+      stock: 100,
+      price: 1030.92,
+      wholesale_price: 1030.92,
+      net_price: 852,
+      unit_net_price: 852,
+      price_per_kilo: 1704,
+      pallet_units: 112,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/YERUPE Yerba Mate 500 g.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1002',
+      sku: '1002',
+      brand: 'YERUPE',
+      name: 'YERUPE Yerba Mate 1 kg',
+      description: 'Yerba mate YERUPE de 1 kg.',
+      stock: 100,
+      price: 2057,
+      wholesale_price: 2057,
+      net_price: 1700,
+      unit_net_price: 1700,
+      price_per_kilo: 1700,
+      pallet_units: 60,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/YERUPE Yerba Mate 1 kg.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1003',
+      sku: '1003',
+      brand: 'ALAZAN',
+      name: 'ALAZAN Yerba Mate 500 g',
+      description: 'Yerba mate ALAZAN de 500 g.',
+      stock: 100,
+      price: 925.65,
+      wholesale_price: 925.65,
+      net_price: 765,
+      unit_net_price: 765,
+      price_per_kilo: 1530,
+      pallet_units: 112,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/ALAZAN Yerba Mate 500 g.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1004',
+      sku: '1004',
+      brand: 'ALAZAN',
+      name: 'ALAZAN Yerba Mate 1 kg',
+      description: 'Yerba mate ALAZAN de 1 kg.',
+      stock: 100,
+      price: 1827.1,
+      wholesale_price: 1827.1,
+      net_price: 1510,
+      unit_net_price: 1510,
+      price_per_kilo: 1510,
+      pallet_units: 60,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/ALAZAN Yerba Mate 1 kg.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1005',
+      sku: '1005',
+      brand: 'SELLO ROJO',
+      name: 'SELLO ROJO Yerba Mate 500 g',
+      description: 'Yerba mate SELLO ROJO de 500 g.',
+      stock: 100,
+      price: 869.99,
+      wholesale_price: 869.99,
+      net_price: 719,
+      unit_net_price: 719,
+      price_per_kilo: 1438,
+      pallet_units: 112,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/SELLO ROJO Yerba Mate 500 g.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1006',
+      sku: '1006',
+      brand: 'SELLO ROJO',
+      name: 'SELLO ROJO Yerba Mate 1 kg',
+      description: 'Yerba mate SELLO ROJO de 1 kg.',
+      stock: 100,
+      price: 1727.88,
+      wholesale_price: 1727.88,
+      net_price: 1428,
+      unit_net_price: 1428,
+      price_per_kilo: 1428,
+      pallet_units: 60,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/SELLO ROJO Yerba Mate 1 kg.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1007',
+      sku: '1007',
+      brand: 'SELLO NEGRO',
+      name: 'SELLO NEGRO Yerba Mate 500 g',
+      description: 'Yerba mate SELLO NEGRO de 500 g.',
+      stock: 100,
+      price: 748.99,
+      wholesale_price: 748.99,
+      net_price: 619,
+      unit_net_price: 619,
+      price_per_kilo: 1238,
+      pallet_units: 112,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/SELLO NEGRO Yerba Mate 500 g.jpeg',
+      unit_of_measure: 'unidad'
+    },
+    {
+      id: 'holowaty-1008',
+      sku: '1008',
+      brand: 'SELLO NEGRO',
+      name: 'SELLO NEGRO Yerba Mate 1 kg',
+      description: 'Yerba mate SELLO NEGRO de 1 kg.',
+      stock: 100,
+      price: 1458.05,
+      wholesale_price: 1458.05,
+      net_price: 1205,
+      unit_net_price: 1205,
+      price_per_kilo: 1205,
+      pallet_units: 60,
+      tax_rate: 0.21,
+      category_name: 'Yerba Mate',
+      image: 'assets/products/holowaty/SELLO NEGRO Yerba Mate 1 kg.jpeg',
+      unit_of_measure: 'unidad'
+    }
+  ];
+
   getProducts(): Observable<Product[]> {
     return of(this.cloneProducts(this.baseProducts));
   }
@@ -486,6 +633,10 @@ export class ProductService {
 
   getRetailCatalogProducts(): Observable<Product[]> {
     return of(this.cloneProducts(this.retailCatalogProducts));
+  }
+
+  getHolowatyCatalogProducts(): Observable<Product[]> {
+    return of(this.cloneProducts(this.holowatyCatalogProducts));
   }
 
   private cloneProducts(products: Product[]): Product[] {

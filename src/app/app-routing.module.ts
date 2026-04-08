@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
+import { HolowatyCatalogComponent } from './products/holowaty-catalog/holowaty-catalog.component';
 import { RetailCatalogComponent } from './products/retail-catalog/retail-catalog.component';
 import { WhatsappCatalogComponent } from './products/whatsapp-catalog/whatsapp-catalog.component';
 import { WholesaleCatalogComponent } from './products/wholesale-catalog/wholesale-catalog.component';
@@ -32,6 +33,10 @@ const routes: Routes = [
   {
     path: 'catalogo-minorista',
     component: RetailCatalogComponent
+  },
+  {
+    path: 'holowaty',
+    component: HolowatyCatalogComponent
   },
   {
     path: 'catalogo-whatsapp',
