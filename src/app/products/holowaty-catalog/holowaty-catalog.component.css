@@ -199,6 +199,44 @@
   color: #4b5d3a;
 }
 
+.holowaty-price-field {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.55rem;
+  border-radius: 12px;
+  border: 1px solid #c7d39f;
+  background: linear-gradient(180deg, #fbfcf5 0%, #edf3db 100%);
+}
+
+.holowaty-price-field input {
+  width: 7ch;
+  min-width: 7ch;
+  max-width: 7ch;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #233119;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: right;
+  outline: none;
+}
+
+.holowaty-price-field input::-webkit-outer-spin-button,
+.holowaty-price-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.holowaty-currency-prefix {
+  color: #4f7240;
+  font-weight: 700;
+}
+
 .holowaty-discount-col {
   justify-content: center;
 }
@@ -329,6 +367,14 @@
   padding: 1rem 1.1rem;
 }
 
+.holowaty-pdf-export .wa-hero {
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  text-align: left !important;
+  padding: 1rem 1.1rem !important;
+}
+
 .holowaty-pdf-export .hero-kicker {
   font-size: 0.72rem;
 }
@@ -358,12 +404,22 @@
 }
 
 .holowaty-pdf-export .hero-logo-shell {
+  width: auto !important;
   min-width: 170px;
+  justify-content: center !important;
+  margin-top: 0 !important;
 }
 
 .holowaty-pdf-export .hero-logo-ring {
   width: 170px;
   height: 110px;
+}
+
+.holowaty-pdf-export .hero-copy,
+.holowaty-pdf-export .holowaty-company-block,
+.holowaty-pdf-export .wa-hero p,
+.holowaty-pdf-export .wa-hero h1 {
+  text-align: left !important;
 }
 
 .holowaty-export-list {

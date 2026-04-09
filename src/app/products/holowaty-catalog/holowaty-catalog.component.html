@@ -79,7 +79,17 @@
       </div>
 
       <div class="price-col holowaty-unit-price-col">
-        <strong>{{ formatPrice(getNetPrice(product)) }}</strong>
+        <label class="holowaty-price-field">
+          <span class="holowaty-currency-prefix">$</span>
+          <input
+            type="text"
+            inputmode="decimal"
+            maxlength="10"
+            [ngModel]="getUnitPriceInputValue(product)"
+            (ngModelChange)="onUnitPriceChange(product, $event)"
+            aria-label="Precio unitario neto"
+          >
+        </label>
       </div>
 
       <div class="discount-col holowaty-discount-col">

@@ -36,6 +36,7 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
 
   searchTerm = '';
   selectedCategory = '';
+  customUnitPrices: Record<string, number> = {};
   commercialDiscounts: Record<string, number> = {};
 
   isLoading = false;
@@ -171,13 +172,18 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
       ]);
       const html2canvas = html2canvasModule.default;
       const exportRoot = this.pdfExportContent.nativeElement;
+      const exportWidth = 1040;
 
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       const canvas = await html2canvas(exportRoot, {
         scale: 2,
         useCORS: true,
-        backgroundColor: '#f2f5e5'
+        backgroundColor: '#f2f5e5',
+        width: exportWidth,
+        windowWidth: exportWidth,
+        scrollX: 0,
+        scrollY: 0
       });
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -312,6 +318,20 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     this.syncOrderItemPrice(product);
   }
 
+  onUnitPriceChange(product: Product, value: string | number | null): void {
+    const sanitizedValue = this.sanitizePriceInput(value);
+    const normalizedValue = Number(sanitizedValue);
+
+    if (!sanitizedValue || Number.isNaN(normalizedValue)) {
+      delete this.customUnitPrices[product.id];
+      this.syncOrderItemPrice(product);
+      return;
+    }
+
+    this.customUnitPrices[product.id] = this.roundCurrency(normalizedValue);
+    this.syncOrderItemPrice(product);
+  }
+
   getCommercialDiscountPercent(product: Product): number {
     return this.clampDiscount(this.commercialDiscounts[product.id] ?? 0);
   }
@@ -319,6 +339,10 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   getCommercialDiscountInputValue(product: Product): string {
     const discount = this.commercialDiscounts[product.id];
     return discount === undefined ? '' : String(discount);
+  }
+
+  getUnitPriceInputValue(product: Product): string {
+    return this.formatEditableNumber(this.getNetPrice(product));
   }
 
   getProductsForPdfExport(): Product[] {
@@ -345,7 +369,7 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   }
 
   getNetPrice(product: Product): number {
-    return product.net_price ?? this.getGrossPrice(product) / (1 + this.getTaxRate(product));
+    return this.customUnitPrices[product.id] ?? this.getBaseNetPrice(product);
   }
 
   getUnitNetPrice(product: Product): number {
@@ -357,7 +381,15 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   }
 
   getPricePerKilo(product: Product): number {
-    return product.price_per_kilo ?? this.getGrossPrice(product);
+    const basePricePerKilo = product.price_per_kilo ?? this.getGrossPrice(product);
+    const baseNetPrice = this.getBaseNetPrice(product);
+    const currentNetPrice = this.getNetPrice(product);
+
+    if (baseNetPrice <= 0) {
+      return basePricePerKilo;
+    }
+
+    return basePricePerKilo * (currentNetPrice / baseNetPrice);
   }
 
   getPalletUnits(product: Product): number {
@@ -415,6 +447,18 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     return Math.min(100, Math.max(0, Number(value.toFixed(2))));
   }
 
+  private getBaseNetPrice(product: Product): number {
+    return product.net_price ?? this.getGrossPrice(product) / (1 + this.getTaxRate(product));
+  }
+
+  private roundCurrency(value: number): number {
+    return Number(value.toFixed(2));
+  }
+
+  private formatEditableNumber(value: number): string {
+    return Number.isInteger(value) ? String(value) : String(this.roundCurrency(value));
+  }
+
   private sanitizeDiscountInput(value: string | number | null): string {
     const rawValue = String(value ?? '')
       .replace(',', '.')
@@ -423,6 +467,23 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
 
     const parts = rawValue.split('.');
     const integerPart = (parts[0] ?? '').slice(0, 3);
+    const decimalPart = parts.length > 1 ? (parts[1] ?? '').slice(0, 2) : '';
+
+    if (!integerPart && !decimalPart) {
+      return '';
+    }
+
+    return decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+  }
+
+  private sanitizePriceInput(value: string | number | null): string {
+    const rawValue = String(value ?? '')
+      .replace(',', '.')
+      .replace(/-/g, '')
+      .replace(/[^\d.]/g, '');
+
+    const parts = rawValue.split('.');
+    const integerPart = (parts[0] ?? '').slice(0, 7);
     const decimalPart = parts.length > 1 ? (parts[1] ?? '').slice(0, 2) : '';
 
     if (!integerPart && !decimalPart) {
