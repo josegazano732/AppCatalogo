@@ -109,11 +109,17 @@
 
 .holowaty-list .list-header,
 .holowaty-list .list-row {
-  grid-template-columns: 2.2fr 0.9fr 1.1fr 0.9fr 0.9fr 0.9fr;
+  grid-template-columns: 2.2fr 0.9fr 1.1fr 0.9fr 1.45fr;
 }
 
 .holowaty-list-header {
   background: linear-gradient(180deg, #d6dfaf 0%, #c4cf97 100%);
+}
+
+.holowaty-list-header span:nth-child(2),
+.holowaty-list-header span:nth-child(3),
+.holowaty-list-header span:nth-child(4) {
+  text-align: center;
 }
 
 .holowaty-row {
@@ -161,13 +167,40 @@
   color: #36522a;
 }
 
+.holowaty-unit-price-col,
+.holowaty-price-col,
+.holowaty-discount-col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.holowaty-commercial-col {
+  display: grid;
+  gap: 0.2rem;
+  align-content: center;
+  padding: 0.15rem 0;
+}
+
+.holowaty-commercial-col p {
+  margin: 0;
+  color: #43573a;
+  font-size: 0.87rem;
+  line-height: 1.35;
+}
+
+.holowaty-commercial-col p:first-child {
+  color: #36522a;
+  font-weight: 700;
+}
+
 .holowaty-unit-price-col strong {
   color: #4b5d3a;
 }
 
 .holowaty-discount-col {
-  display: flex;
-  align-items: center;
+  justify-content: center;
 }
 
 .holowaty-discount-field {
@@ -213,55 +246,209 @@
   box-shadow: 0 12px 22px rgb(55 88 43 / 20%);
 }
 
-.holowaty-summary {
-  border-color: rgb(208 225 163 / 24%);
+.holowaty-pdf-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  width: min(1200px, calc(100% - 2rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-color: #c0cb96;
   background:
-    radial-gradient(circle at 12% -60%, rgb(172 196 107 / 28%) 0%, rgb(172 196 107 / 0%) 50%),
-    radial-gradient(circle at 100% 100%, rgb(95 129 68 / 18%) 0%, rgb(95 129 68 / 0%) 38%),
-    linear-gradient(135deg, #2f4823 0%, #456636 48%, #5d7d49 100%);
-  color: #f7faef;
-  box-shadow: 0 24px 44px rgb(15 29 10 / 30%), 0 4px 12px rgb(13 26 9 / 18%);
+    radial-gradient(circle at 0% 0%, rgb(177 201 120 / 16%) 0%, rgb(177 201 120 / 0%) 34%),
+    linear-gradient(145deg, rgb(249 251 242 / 96%) 0%, rgb(232 238 212 / 96%) 100%);
+  box-shadow: 0 22px 40px rgb(22 39 14 / 18%), 0 4px 12px rgb(22 39 14 / 10%);
+  z-index: 1000;
 }
 
-.holowaty-summary .summary-cart-pill {
-  background: rgb(255 255 255 / 10%);
-  border-color: rgb(255 255 255 / 18%);
-  color: #f4f7e9;
+.holowaty-pdf-copy {
+  display: grid;
+  gap: 0.15rem;
 }
 
-.holowaty-summary .summary-amount p {
-  color: rgb(240 245 224 / 78%);
-  opacity: 1;
+.holowaty-pdf-copy p,
+.holowaty-pdf-copy strong,
+.holowaty-pdf-copy small {
+  margin: 0;
 }
 
-.holowaty-summary .summary-amount strong {
-  color: #ffffff;
-  text-shadow: 0 1px 0 rgb(0 0 0 / 12%);
+.holowaty-pdf-copy p {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #4f7240;
+  font-weight: 700;
 }
 
-.holowaty-summary .summary-amount small {
-  color: rgb(236 242 220 / 82%);
-  opacity: 1;
+.holowaty-pdf-copy strong {
+  color: #233119;
+  font-size: 1.04rem;
 }
 
-.holowaty-summary .btn-clear {
-  background: rgb(255 255 255 / 12%);
-  color: #f7faef;
-  border: 1px solid rgb(255 255 255 / 16%);
+.holowaty-pdf-copy small {
+  color: #546746;
 }
 
-.holowaty-summary .btn-clear:hover {
-  background: rgb(255 255 255 / 18%);
+.holowaty-pdf-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.holowaty-summary .holowaty-send {
-  background: linear-gradient(145deg, #d9e67a 0%, #b7cf57 100%);
-  color: #283a1e;
-  box-shadow: 0 12px 22px rgb(19 35 12 / 18%);
+.holowaty-pdf-actions .holowaty-send {
+  min-width: 172px;
 }
 
-.holowaty-summary .holowaty-send:hover {
-  filter: brightness(1.02);
+.holowaty-pdf-export {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 1040px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgb(242 245 229 / 98%) 0%, rgb(230 237 207 / 96%) 100%),
+    url('../../../assets/backgrounds/yerba-mate-leaves.png');
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.holowaty-export-hero,
+.holowaty-export-list {
+  margin: 0;
+  width: 100%;
+}
+
+.holowaty-pdf-export .holowaty-export-hero {
+  padding: 1rem 1.1rem;
+}
+
+.holowaty-pdf-export .hero-kicker {
+  font-size: 0.72rem;
+}
+
+.holowaty-pdf-export .hero-title-with-icon {
+  gap: 0.35rem;
+}
+
+.holowaty-pdf-export .wa-hero h1 {
+  margin: 0.15rem 0 0.25rem;
+  font-size: 1.65rem;
+}
+
+.holowaty-pdf-export .holowaty-company-block {
+  margin-top: 0.55rem;
+  padding: 0.65rem 0.8rem;
+  gap: 0.14rem;
+  max-width: 27rem;
+}
+
+.holowaty-pdf-export .holowaty-company-block strong {
+  font-size: 0.96rem;
+}
+
+.holowaty-pdf-export .holowaty-company-block p:first-child {
+  font-size: 0.68rem;
+}
+
+.holowaty-pdf-export .hero-logo-shell {
+  min-width: 170px;
+}
+
+.holowaty-pdf-export .hero-logo-ring {
+  width: 170px;
+  height: 110px;
+}
+
+.holowaty-export-list {
+  overflow: visible;
+}
+
+.holowaty-export-list .list-row {
+  break-inside: avoid;
+}
+
+.holowaty-pdf-export .holowaty-export-list .list-header,
+.holowaty-pdf-export .holowaty-export-list .list-row {
+  grid-template-columns: 2.15fr 0.82fr 0.92fr 0.82fr 1.29fr;
+  gap: 0.55rem;
+}
+
+.holowaty-pdf-export .holowaty-export-list .list-header,
+.holowaty-pdf-export .holowaty-export-list .list-row {
+  padding: 0.62rem 0.72rem;
+}
+
+.holowaty-pdf-export .holowaty-export-list .list-header {
+  font-size: 0.8rem;
+}
+
+.holowaty-pdf-export .product-main {
+  grid-template-columns: 74px 1fr;
+  gap: 0.55rem;
+}
+
+.holowaty-pdf-export .product-thumb {
+  width: 68px;
+  height: 94px;
+  border-radius: 10px;
+}
+
+.holowaty-pdf-export .holowaty-badges {
+  margin-bottom: 0.28rem;
+  gap: 0.28rem;
+}
+
+.holowaty-pdf-export .holowaty-badge {
+  min-height: 22px;
+  padding: 0.12rem 0.48rem;
+  font-size: 0.67rem;
+}
+
+.holowaty-pdf-export .product-main h3 {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+.holowaty-pdf-export .holowaty-product-copy,
+.holowaty-pdf-export .product-text small {
+  font-size: 0.72rem;
+  line-height: 1.22;
+}
+
+.holowaty-pdf-export .holowaty-unit-price-col strong,
+.holowaty-pdf-export .holowaty-price-col strong {
+  font-size: 0.88rem;
+}
+
+.holowaty-pdf-export .holowaty-discount-field {
+  padding: 0.28rem 0.4rem;
+  gap: 0.3rem;
+  border-radius: 8px;
+}
+
+.holowaty-pdf-export .holowaty-discount-field span,
+.holowaty-pdf-export .holowaty-discount-field input {
+  font-size: 0.78rem;
+}
+
+.holowaty-pdf-export .holowaty-commercial-col {
+  gap: 0.12rem;
+}
+
+.holowaty-pdf-export .holowaty-commercial-col p {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.holowaty-discount-static {
+  pointer-events: none;
 }
 
 .holowaty-dialog {
@@ -301,6 +488,26 @@
   }
 
   .holowaty-discount-col {
+    width: 100%;
+  }
+
+  .holowaty-commercial-col {
+    padding-top: 0.35rem;
+    border-top: 1px dashed #ced9ae;
+  }
+
+  .holowaty-pdf-bar {
+    flex-direction: column;
+    align-items: stretch;
+    width: calc(100% - 1rem);
+    bottom: 0.5rem;
+  }
+
+  .holowaty-pdf-actions {
+    justify-content: stretch;
+  }
+
+  .holowaty-pdf-actions .holowaty-send {
     width: 100%;
   }
 }

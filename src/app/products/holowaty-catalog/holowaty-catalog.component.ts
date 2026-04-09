@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { CartItem } from '../../models/cart-item.model';
@@ -15,6 +15,9 @@ import { ProductService } from '../../services/product.service';
   ]
 })
 export class HolowatyCatalogComponent implements OnInit, OnDestroy {
+  @ViewChild('pdfExportContent')
+  private pdfExportContent?: ElementRef<HTMLElement>;
+
   private readonly productDisplayOrder: string[] = [
     'YERUPE Yerba Mate 500 g',
     'YERUPE Yerba Mate 1 kg',
@@ -36,6 +39,7 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   commercialDiscounts: Record<string, number> = {};
 
   isLoading = false;
+  isGeneratingPdf = false;
   errorMessage = '';
 
   currentPage = 1;
@@ -151,6 +155,52 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     this.currentPage = nextPage;
     this.updateDisplayedProducts();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async downloadCatalogPdf(): Promise<void> {
+    if (!this.pdfExportContent?.nativeElement || this.isGeneratingPdf) {
+      return;
+    }
+
+    this.isGeneratingPdf = true;
+
+    try {
+      const [{ jsPDF }, html2canvasModule] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas')
+      ]);
+      const html2canvas = html2canvasModule.default;
+      const exportRoot = this.pdfExportContent.nativeElement;
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const canvas = await html2canvas(exportRoot, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#f2f5e5'
+      });
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 3;
+      const imageData = canvas.toDataURL('image/png');
+      const usableWidth = pageWidth - margin * 2;
+      const usableHeight = pageHeight - margin * 2;
+      const widthScale = usableWidth / canvas.width;
+      const heightScale = usableHeight / canvas.height;
+      const scale = Math.min(widthScale, heightScale);
+      const renderWidth = canvas.width * scale;
+      const renderHeight = canvas.height * scale;
+      const x = (pageWidth - renderWidth) / 2;
+      const y = margin;
+
+      pdf.addImage(imageData, 'PNG', x, y, renderWidth, renderHeight);
+
+      pdf.save('catalogo-holowaty.pdf');
+    } finally {
+      this.isGeneratingPdf = false;
+    }
   }
 
   addOrder(product: Product): void {
@@ -271,10 +321,23 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     return discount === undefined ? '' : String(discount);
   }
 
+  getProductsForPdfExport(): Product[] {
+    return this.filteredProducts;
+  }
+
   getDiscountedNetPrice(product: Product): number {
     const baseNetPrice = this.getNetPrice(product);
     const discountRate = this.getCommercialDiscountPercent(product) / 100;
     return baseNetPrice * (1 - discountRate);
+  }
+
+  getDiscountedGrossPrice(product: Product): number {
+    return this.getDiscountedNetPrice(product) * (1 + this.getTaxRate(product));
+  }
+
+  getDiscountedPricePerKilo(product: Product): number {
+    const discountRate = this.getCommercialDiscountPercent(product) / 100;
+    return this.getPricePerKilo(product) * (1 - discountRate);
   }
 
   getGrossPrice(product: Product): number {
