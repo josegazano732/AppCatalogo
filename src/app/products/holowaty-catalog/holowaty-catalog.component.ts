@@ -29,18 +29,33 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     'SELLO NEGRO Yerba Mate 1 kg'
   ];
 
+  private readonly defaultListPricesByName: Record<string, number> = {
+    'YERUPE Yerba Mate 500 g': 1260,
+    'ALAZAN Yerba Mate 500 g': 1134,
+    'SELLO ROJO Yerba Mate 500 g': 1066,
+    'SELLO NEGRO Yerba Mate 500 g': 916,
+    'YERUPE Yerba Mate 1 kg': 2520,
+    'ALAZAN Yerba Mate 1 kg': 2238,
+    'SELLO ROJO Yerba Mate 1 kg': 2116,
+    'SELLO NEGRO Yerba Mate 1 kg': 1786
+  };
+
   products: Product[] = [];
   filteredProducts: Product[] = [];
   displayedProducts: Product[] = [];
-  categories: string[] = [];
 
-  searchTerm = '';
-  selectedCategory = '';
-  customUnitPrices: Record<string, number> = {};
+  listPeriodLabel = 'Abril 2026';
+  paymentTermsLabel = '30-45-60 dias';
+  destinationLabel = 'BsAs-Rosario-Cba.';
+  freightLabel = 'Flete incluido';
+  listPriceDrafts: Record<string, string> = {};
+  customListPrices: Record<string, number> = {};
+  invoiceDiscounts: Record<string, number> = {};
   commercialDiscounts: Record<string, number> = {};
 
   isLoading = false;
   isGeneratingPdf = false;
+  isGeneratingPdfCommercial = false;
   errorMessage = '';
 
   currentPage = 1;
@@ -62,6 +77,8 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
 
   whatsappPhone = '5493758418515';
   private readonly holowatyCategories = ['Yerba Mate'];
+  private readonly defaultInvoiceDiscountPercent = 10;
+  private readonly defaultCommercialDiscountPercent = 25;
   private readonly subscriptions = new Subscription();
 
   constructor(
@@ -100,13 +117,6 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
           .sort((a: Product, b: Product) => this.getProductSortRank(a) - this.getProductSortRank(b));
 
         this.products = holowatyProducts;
-        this.categories = [
-          ...new Set(
-            holowatyProducts
-              .map((product: Product) => this.getCategoryLabel(product))
-              .filter((category): category is string => Boolean(category))
-          )
-        ];
         this.applyFilters();
         this.isLoading = false;
       },
@@ -120,20 +130,74 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    const normalizedSearch = this.normalizeText(this.searchTerm);
-    const normalizedCategory = this.normalizeText(this.selectedCategory);
-
-    this.filteredProducts = this.products.filter((product: Product) => {
-      const categoryLabel = this.getCategoryLabel(product);
-      const searchSource = `${product.name} ${product.description ?? ''} ${categoryLabel} ${product.brand ?? ''} ${product.sku ?? ''}`;
-      const categoryMatch = !normalizedCategory || this.normalizeText(categoryLabel) === normalizedCategory;
-      const searchMatch = !normalizedSearch || this.normalizeText(searchSource).includes(normalizedSearch);
-
-      return categoryMatch && searchMatch;
-    });
+    this.filteredProducts = [...this.products];
 
     this.currentPage = 1;
     this.updateDisplayedProducts();
+  }
+
+  onListPeriodChange(value: string | null): void {
+    this.listPeriodLabel = this.sanitizeCommercialText(value, 'Abril 2026', 30);
+  }
+
+  onPaymentTermsChange(value: string | null): void {
+    this.paymentTermsLabel = this.sanitizeCommercialText(value, '30-45-60 dias', 24);
+  }
+
+  onDestinationChange(value: string | null): void {
+    this.destinationLabel = this.sanitizeCommercialText(value, 'BsAs-Rosario-Cba.', 30);
+  }
+
+  onFreightLabelChange(value: string | null): void {
+    this.freightLabel = this.sanitizeCommercialText(value, '', 24, true);
+  }
+
+  selectInputValue(event: FocusEvent): void {
+    const target = event.target;
+
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    target.dataset['replaceOnInput'] = 'true';
+    requestAnimationFrame(() => target.select());
+  }
+
+  replaceInputValueOnType(event: InputEvent): void {
+    const target = event.target;
+
+    if (!(target instanceof HTMLInputElement) || target.dataset['replaceOnInput'] !== 'true') {
+      return;
+    }
+
+    if (event.inputType.startsWith('insert') && event.data !== null) {
+      event.preventDefault();
+      target.dataset['replaceOnInput'] = 'false';
+      target.value = event.data;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+      requestAnimationFrame(() => {
+        const cursorPosition = target.value.length;
+        target.setSelectionRange(cursorPosition, cursorPosition);
+      });
+      return;
+    }
+
+    if (event.inputType.startsWith('delete')) {
+      event.preventDefault();
+      target.dataset['replaceOnInput'] = 'false';
+      target.value = '';
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  resetInputReplaceState(event: FocusEvent): void {
+    const target = event.target;
+
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    target.dataset['replaceOnInput'] = 'false';
   }
 
   updateDisplayedProducts(): void {
@@ -209,8 +273,139 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     }
   }
 
+  async downloadCommercialPdf(): Promise<void> {
+    if (this.filteredProducts.length === 0 || this.isGeneratingPdfCommercial) {
+      return;
+    }
+
+    this.isGeneratingPdfCommercial = true;
+
+    try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const autoTable = autoTableModule.default;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const products = this.getProductsForCommercialPdf();
+      const headerLogoData = await this.loadProductImageData('assets/branding/holowaty-logo.jpeg');
+      const productImageMap = await this.loadCommercialPdfImageMap(products);
+      const tableBody: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [];
+
+      this.buildCommercialPdfRows(products, 500).forEach((row) => tableBody.push(row));
+      this.buildCommercialPdfRows(products, 1000).forEach((row) => tableBody.push(row));
+
+      this.drawCommercialPdfHeader(pdf, headerLogoData);
+
+      autoTable(pdf, {
+        startY: 39,
+        theme: 'grid',
+        tableWidth: 'auto',
+        head: [[
+          'CODIGO',
+          'Descripcion',
+          'Precio Lista',
+          'Factura',
+          '1ER. NETO',
+          '% Comercial',
+          '2DO. NETO',
+          '3ER NETO',
+          'IVA',
+          'P. FINAL',
+          'Destino'
+        ]],
+        body: tableBody,
+        styles: {
+          font: 'helvetica',
+          fontSize: 7.1,
+          cellPadding: { top: 1.1, right: 1.2, bottom: 1.1, left: 1.2 },
+          lineColor: [174, 186, 149],
+          lineWidth: 0.15,
+          textColor: [46, 57, 39],
+          valign: 'middle',
+          halign: 'center'
+        },
+        headStyles: {
+          fillColor: [212, 223, 186],
+          textColor: [43, 56, 35],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fillColor: [248, 249, 243]
+        },
+        alternateRowStyles: {
+          fillColor: [239, 244, 231]
+        },
+        columnStyles: {
+          0: { cellWidth: 14, halign: 'center' },
+          1: { cellWidth: 54, halign: 'center' },
+          2: { cellWidth: 23, halign: 'center' },
+          3: { cellWidth: 15, halign: 'center' },
+          4: { cellWidth: 23, halign: 'center' },
+          5: { cellWidth: 19, halign: 'center' },
+          6: { cellWidth: 23, halign: 'center' },
+          7: { cellWidth: 23, halign: 'center' },
+          8: { cellWidth: 19, halign: 'center' },
+          9: { cellWidth: 23, halign: 'center' },
+          10: { cellWidth: 29, halign: 'center' }
+        },
+        didParseCell: (hookData: any) => {
+          const rawRow = hookData.row.raw;
+
+          if (Array.isArray(rawRow) && rawRow.length === 1 && typeof rawRow[0] === 'object' && rawRow[0] !== null) {
+            hookData.cell.styles['fillColor'] = [226, 234, 204];
+            hookData.cell.styles['fontStyle'] = 'bold';
+            hookData.cell.styles['textColor'] = [56, 71, 44];
+          }
+
+          if (Array.isArray(rawRow) && rawRow.length > 2 && hookData.column.index === 1) {
+            hookData.cell.styles['cellPadding'] = { top: 1.1, right: 1.2, bottom: 1.1, left: 12.5 };
+          }
+
+          if (hookData.column.index === 7) {
+            hookData.cell.styles['fillColor'] = [230, 204, 108];
+            hookData.cell.styles['fontStyle'] = 'bold';
+            hookData.cell.styles['textColor'] = [78, 63, 14];
+          }
+        },
+        didDrawCell: (hookData: any) => {
+          const rawRow = hookData.row.raw;
+
+          if (!Array.isArray(rawRow) || rawRow.length <= 2 || hookData.column.index !== 1) {
+            return;
+          }
+
+          const sku = String(rawRow[0] ?? '');
+          const imageData = productImageMap[sku];
+
+          if (!imageData) {
+            return;
+          }
+
+          const imageSize = Math.min(8.5, hookData.cell.height - 1.4);
+          const imageX = hookData.cell.x + 1.4;
+          const imageY = hookData.cell.y + (hookData.cell.height - imageSize) / 2;
+
+          try {
+            pdf.addImage(imageData, 'JPEG', imageX, imageY, imageSize, imageSize);
+          } catch {
+            // Si alguna imagen falla, mantenemos la exportacion sin interrumpir el PDF.
+          }
+        }
+      });
+
+      const lastY = (pdf as any).lastAutoTable?.finalY ?? 0;
+      this.drawCommercialPdfPaymentBlock(pdf, lastY + 7);
+
+      pdf.save('catalogo-holowaty-comercial.pdf');
+    } finally {
+      this.isGeneratingPdfCommercial = false;
+    }
+  }
+
   addOrder(product: Product): void {
-    const unitPrice = this.getDiscountedNetPrice(product);
+    const unitPrice = this.getThirdNetPrice(product);
 
     this.cartService.addToCart({
       id: product.id,
@@ -304,6 +499,20 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     return item?.quantity ?? 0;
   }
 
+  onInvoiceDiscountChange(product: Product, value: string | number | null): void {
+    const sanitizedValue = this.sanitizeDiscountInput(value);
+    const normalizedValue = Number(sanitizedValue);
+
+    if (!sanitizedValue || Number.isNaN(normalizedValue)) {
+      this.invoiceDiscounts[product.id] = 0;
+      this.syncOrderItemPrice(product);
+      return;
+    }
+
+    this.invoiceDiscounts[product.id] = this.clampDiscount(normalizedValue);
+    this.syncOrderItemPrice(product);
+  }
+
   onCommercialDiscountChange(product: Product, value: string | number | null): void {
     const sanitizedValue = this.sanitizeDiscountInput(value);
     const normalizedValue = Number(sanitizedValue);
@@ -318,78 +527,113 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     this.syncOrderItemPrice(product);
   }
 
-  onUnitPriceChange(product: Product, value: string | number | null): void {
-    const sanitizedValue = this.sanitizePriceInput(value);
-    const normalizedValue = Number(sanitizedValue);
+  onListPriceChange(product: Product, value: string | number | null): void {
+    const rawValue = String(value ?? '');
+    this.listPriceDrafts[product.id] = rawValue;
 
-    if (!sanitizedValue || Number.isNaN(normalizedValue)) {
-      delete this.customUnitPrices[product.id];
+    const normalizedValue = this.parsePriceInput(rawValue);
+
+    if (normalizedValue === null || Number.isNaN(normalizedValue)) {
+      delete this.customListPrices[product.id];
       this.syncOrderItemPrice(product);
       return;
     }
 
-    this.customUnitPrices[product.id] = this.roundCurrency(normalizedValue);
+    this.customListPrices[product.id] = this.roundCurrency(normalizedValue);
     this.syncOrderItemPrice(product);
   }
 
+  onListPriceFocus(product: Product, event: FocusEvent): void {
+    this.listPriceDrafts[product.id] = this.formatEditablePrice(this.getListPrice(product));
+    this.selectInputValue(event);
+  }
+
+  onListPriceBlur(product: Product, event: FocusEvent): void {
+    const draftValue = this.listPriceDrafts[product.id];
+
+    if (draftValue !== undefined) {
+      const normalizedValue = this.parsePriceInput(draftValue);
+
+      if (normalizedValue === null || Number.isNaN(normalizedValue)) {
+        delete this.customListPrices[product.id];
+      } else {
+        this.customListPrices[product.id] = this.roundCurrency(normalizedValue);
+      }
+
+      delete this.listPriceDrafts[product.id];
+      this.syncOrderItemPrice(product);
+    }
+
+    this.resetInputReplaceState(event);
+  }
+
+  getInvoiceDiscountPercent(product: Product): number {
+    return this.clampDiscount(this.invoiceDiscounts[product.id] ?? this.defaultInvoiceDiscountPercent);
+  }
+
+  getInvoiceDiscountInputValue(product: Product): string {
+    return this.formatEditableNumber(this.getInvoiceDiscountPercent(product));
+  }
+
   getCommercialDiscountPercent(product: Product): number {
-    return this.clampDiscount(this.commercialDiscounts[product.id] ?? 0);
+    return this.clampDiscount(this.commercialDiscounts[product.id] ?? this.defaultCommercialDiscountPercent);
   }
 
   getCommercialDiscountInputValue(product: Product): string {
-    const discount = this.commercialDiscounts[product.id];
-    return discount === undefined ? '' : String(discount);
+    return this.formatEditableNumber(this.getCommercialDiscountPercent(product));
   }
 
-  getUnitPriceInputValue(product: Product): string {
-    return this.formatEditableNumber(this.getNetPrice(product));
+  getListPriceInputValue(product: Product): string {
+    return this.listPriceDrafts[product.id] ?? this.formatEditablePrice(this.getListPrice(product));
   }
 
   getProductsForPdfExport(): Product[] {
     return this.filteredProducts;
   }
 
-  getDiscountedNetPrice(product: Product): number {
-    const baseNetPrice = this.getNetPrice(product);
+  getProductsForCommercialPdf(): Product[] {
+    return [...this.filteredProducts].sort((a: Product, b: Product) => {
+      const weightRank = this.getCommercialPdfGroupRank(a) - this.getCommercialPdfGroupRank(b);
+      if (weightRank !== 0) {
+        return weightRank;
+      }
+
+      return this.getProductSortRank(a) - this.getProductSortRank(b);
+    });
+  }
+
+  getListPrice(product: Product): number {
+    return this.customListPrices[product.id] ?? this.getBaseListPrice(product);
+  }
+
+  getFirstNetPrice(product: Product): number {
+    const invoiceDiscountRate = this.getInvoiceDiscountPercent(product) / 100;
+    return this.getListPrice(product) * (1 - invoiceDiscountRate);
+  }
+
+  getSecondNetPrice(product: Product): number {
     const discountRate = this.getCommercialDiscountPercent(product) / 100;
-    return baseNetPrice * (1 - discountRate);
+    return this.getFirstNetPrice(product) * (1 - discountRate);
   }
 
-  getDiscountedGrossPrice(product: Product): number {
-    return this.getDiscountedNetPrice(product) * (1 + this.getTaxRate(product));
+  getThirdNetPrice(product: Product): number {
+    return this.getSecondNetPrice(product);
   }
 
-  getDiscountedPricePerKilo(product: Product): number {
-    const discountRate = this.getCommercialDiscountPercent(product) / 100;
-    return this.getPricePerKilo(product) * (1 - discountRate);
+  getTaxAmount(product: Product): number {
+    return this.getThirdNetPrice(product) * this.getTaxRate(product);
   }
 
-  getGrossPrice(product: Product): number {
-    return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
-  }
-
-  getNetPrice(product: Product): number {
-    return this.customUnitPrices[product.id] ?? this.getBaseNetPrice(product);
-  }
-
-  getUnitNetPrice(product: Product): number {
-    return product.unit_net_price ?? this.getNetPrice(product);
+  getFinalPrice(product: Product): number {
+    return this.getThirdNetPrice(product) + this.getTaxAmount(product);
   }
 
   getTaxRate(product: Product): number {
     return product.tax_rate ?? 0.21;
   }
 
-  getPricePerKilo(product: Product): number {
-    const basePricePerKilo = product.price_per_kilo ?? this.getGrossPrice(product);
-    const baseNetPrice = this.getBaseNetPrice(product);
-    const currentNetPrice = this.getNetPrice(product);
-
-    if (baseNetPrice <= 0) {
-      return basePricePerKilo;
-    }
-
-    return basePricePerKilo * (currentNetPrice / baseNetPrice);
+  getPalletMark(product: Product): string {
+    return this.getPalletUnits(product) > 0 ? 'x' : '-';
   }
 
   getPalletUnits(product: Product): number {
@@ -398,6 +642,10 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
 
   getCategoryLabel(product: Product): string {
     return product.category_name || product.category || 'Sin categoria';
+  }
+
+  getCompactDescription(product: Product): string {
+    return `${this.getPalletUnits(product)} bultos x pallet`;
   }
 
   formatPrice(value: number): string {
@@ -412,6 +660,233 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   private getProductSortRank(product: Product): number {
     const index = this.productDisplayOrder.indexOf(product.name);
     return index >= 0 ? index : this.productDisplayOrder.length;
+  }
+
+  private buildCommercialPdfRows(products: Product[], weight: number): Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> {
+    const groupProducts = products.filter((product: Product) => this.getCommercialPdfGroupRank(product) === weight);
+
+    if (groupProducts.length === 0) {
+      return [];
+    }
+
+    const rows: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [[{
+      content: weight === 500 ? 'Presentacion 500 gramos' : 'Presentacion 1 kg',
+      colSpan: 12,
+      styles: {
+        halign: 'left'
+      }
+    }]];
+
+    groupProducts.forEach((product: Product) => {
+      rows.push([
+        product.sku || '-',
+        this.getCommercialPdfDescription(product),
+        this.formatCompactPrice(product, this.getListPrice(product)),
+        `${this.formatEditableNumber(this.getInvoiceDiscountPercent(product))}%`,
+        this.formatCompactPrice(product, this.getFirstNetPrice(product)),
+        `${this.formatEditableNumber(this.getCommercialDiscountPercent(product))}%`,
+        this.formatCompactPrice(product, this.getSecondNetPrice(product)),
+        this.formatCompactPrice(product, this.getThirdNetPrice(product)),
+        this.formatCompactPrice(product, this.getTaxAmount(product)),
+        this.formatCompactPrice(product, this.getFinalPrice(product)),
+        this.getCommercialPdfDestination()
+      ]);
+    });
+
+    return rows;
+  }
+
+  private getCommercialPdfDescription(product: Product): string {
+    const weightLabel = this.getCommercialPdfGroupRank(product) === 500 ? 'x 500 gramos' : 'x 1000 gramos';
+    return `${this.toTitleCase(product.brand || product.name)} ${weightLabel}`;
+  }
+
+  private getCommercialPdfDestination(): string {
+    return this.freightLabel ? `${this.destinationLabel}\n${this.freightLabel}` : this.destinationLabel;
+  }
+
+  private async loadCommercialPdfImageMap(products: Product[]): Promise<Record<string, string>> {
+    const entries = await Promise.all(
+      products.map(async (product: Product) => {
+        const imageData = await this.loadProductImageData(product.image);
+        return [product.sku || product.id, imageData] as const;
+      })
+    );
+
+    return entries.reduce((acc: Record<string, string>, [key, value]) => {
+      if (value) {
+        acc[key] = value;
+      }
+
+      return acc;
+    }, {});
+  }
+
+  private async loadProductImageData(imagePath?: string): Promise<string | null> {
+    if (!imagePath || typeof fetch === 'undefined' || typeof FileReader === 'undefined' || typeof document === 'undefined') {
+      return null;
+    }
+
+    try {
+      const response = await fetch(new URL(imagePath, document.baseURI).toString());
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const blob = await response.blob();
+
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+
+        reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private getCommercialPdfGroupRank(product: Product): number {
+    const normalizedSource = this.normalizeText(`${product.name} ${product.description ?? ''}`);
+
+    if (normalizedSource.includes('500 g') || normalizedSource.includes('500g') || normalizedSource.includes('500 gramos')) {
+      return 500;
+    }
+
+    if (normalizedSource.includes('1 kg') || normalizedSource.includes('1kg') || normalizedSource.includes('1000 g') || normalizedSource.includes('1000 gramos')) {
+      return 1000;
+    }
+
+    return 9999;
+  }
+
+  private getCommercialPdfTitle(): string {
+    return `Lista de precios - Holowaty Oscar - ${this.listPeriodLabel}.`;
+  }
+
+  private drawCommercialPdfHeader(pdf: any, logoData: string | null): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+
+    pdf.setFillColor(248, 249, 243);
+    pdf.rect(10, 8, pageWidth - 20, 26, 'F');
+
+    pdf.setFillColor(84, 111, 63);
+    pdf.rect(10, 8, pageWidth - 20, 2.4, 'F');
+
+    pdf.setDrawColor(205, 214, 181);
+    pdf.setLineWidth(0.2);
+    pdf.rect(10, 8, pageWidth - 20, 26);
+
+    pdf.setDrawColor(220, 226, 199);
+    pdf.line(73, 12.5, 73, 31.2);
+
+    pdf.setTextColor(94, 119, 73);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.8);
+    pdf.text('ELABORADO Y ENVASADO POR', 15, 15.6);
+
+    pdf.setTextColor(42, 59, 33);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.2);
+    pdf.text('Holowaty Hugo Oscar', 15, 20.4);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.4);
+    pdf.setTextColor(92, 107, 81);
+    pdf.text('Ruta provincial 105 - Lote agricola N 57', 15, 25.7);
+    pdf.text('Cel: (3758) 15 433581', 15, 31.3);
+
+    pdf.setTextColor(43, 52, 36);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13.2);
+    pdf.text(this.getCommercialPdfTitle(), pageWidth / 2, 22.2, { align: 'center' });
+
+    if (logoData) {
+      try {
+        const logoAnchorRight = pageWidth - 15.5;
+        const logoCenterY = 21;
+        const maxLogoWidth = 29;
+        const maxLogoHeight = 18.8;
+        const logoProps = pdf.getImageProperties(logoData);
+        const logoRatio = logoProps.width / logoProps.height;
+        let renderWidth = maxLogoWidth;
+        let renderHeight = renderWidth / logoRatio;
+
+        if (renderHeight > maxLogoHeight) {
+          renderHeight = maxLogoHeight;
+          renderWidth = renderHeight * logoRatio;
+        }
+
+        const renderX = logoAnchorRight - renderWidth;
+        const renderY = logoCenterY - (renderHeight / 2);
+
+        pdf.addImage(logoData, 'JPEG', renderX, renderY, renderWidth, renderHeight);
+      } catch {
+        // Si el logo no se puede renderizar, el PDF sigue sin interrumpirse.
+      }
+    }
+
+    pdf.setDrawColor(214, 221, 191);
+    pdf.line(10, 34.5, pageWidth - 10, 34.5);
+  }
+
+  private drawCommercialPdfPaymentBlock(pdf: any, startY: number): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const blockWidth = 92;
+    const blockHeight = 12.8;
+    const blockX = (pageWidth - blockWidth) / 2;
+    const titleHeight = 4.6;
+    const contentTop = startY + titleHeight;
+    const labelWidth = 26;
+
+    pdf.setFillColor(247, 249, 241);
+    pdf.roundedRect(blockX, startY, blockWidth, blockHeight, 1.8, 1.8, 'F');
+
+    pdf.setFillColor(84, 111, 63);
+    pdf.roundedRect(blockX, startY, blockWidth, titleHeight, 1.8, 1.8, 'F');
+    pdf.rect(blockX, startY + titleHeight - 1.8, blockWidth, 1.8, 'F');
+
+    pdf.setDrawColor(198, 208, 171);
+    pdf.setLineWidth(0.2);
+    pdf.roundedRect(blockX, startY, blockWidth, blockHeight, 1.8, 1.8, 'S');
+
+    pdf.setDrawColor(217, 224, 197);
+    pdf.line(blockX + labelWidth, contentTop, blockX + labelWidth, startY + blockHeight);
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.3);
+    pdf.text('CONDICIONES DE PAGO', pageWidth / 2, startY + 3.05, { align: 'center' });
+
+    pdf.setTextColor(92, 107, 81);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(5.9);
+    pdf.text('PLAZO', blockX + labelWidth / 2, contentTop + 4.1, { align: 'center' });
+
+    pdf.setTextColor(41, 54, 34);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9.8);
+    pdf.text(this.paymentTermsLabel.replace(/-/g, ' - '), blockX + labelWidth + ((blockWidth - labelWidth) / 2), contentTop + 4.9, { align: 'center' });
+  }
+
+  private formatCompactPrice(product: Product, value: number): string {
+    const formattedValue = new Intl.NumberFormat('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(this.roundCurrency(value));
+
+    return `${formattedValue}`;
+  }
+
+  private toTitleCase(value: string): string {
+    return value
+      .toLowerCase()
+      .split(' ')
+      .filter(Boolean)
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   private normalizeText(value: string): string {
@@ -438,7 +913,7 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
 
     this.cartService.updateItemPricing(
       product.id,
-      this.getDiscountedNetPrice(product),
+      this.getThirdNetPrice(product),
       this.getCommercialDiscountPercent(product)
     );
   }
@@ -451,12 +926,41 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     return product.net_price ?? this.getGrossPrice(product) / (1 + this.getTaxRate(product));
   }
 
+  private getBaseListPrice(product: Product): number {
+    const configuredListPrice = this.defaultListPricesByName[product.name];
+
+    if (typeof configuredListPrice === 'number') {
+      return configuredListPrice;
+    }
+
+    const invoiceFactor = 1 - this.defaultInvoiceDiscountPercent / 100;
+    const commercialFactor = 1 - this.defaultCommercialDiscountPercent / 100;
+    const baseNetPrice = this.getBaseNetPrice(product);
+
+    if (invoiceFactor <= 0 || commercialFactor <= 0) {
+      return baseNetPrice;
+    }
+
+    return this.roundCurrency(baseNetPrice / (invoiceFactor * commercialFactor));
+  }
+
+  private getGrossPrice(product: Product): number {
+    return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
+  }
+
   private roundCurrency(value: number): number {
     return Number(value.toFixed(2));
   }
 
   private formatEditableNumber(value: number): string {
     return Number.isInteger(value) ? String(value) : String(this.roundCurrency(value));
+  }
+
+  private formatEditablePrice(value: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(this.roundCurrency(value));
   }
 
   private sanitizeDiscountInput(value: string | number | null): string {
@@ -491,5 +995,46 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
     }
 
     return decimalPart ? `${integerPart}.${decimalPart}` : integerPart;
+  }
+
+  private parsePriceInput(value: string | number | null): number | null {
+    const rawValue = String(value ?? '')
+      .replace(/\s+/g, '')
+      .replace(/-/g, '')
+      .replace(/[^\d.,]/g, '');
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const decimalSeparatorIndex = Math.max(rawValue.lastIndexOf(','), rawValue.lastIndexOf('.'));
+    const integerPart = (decimalSeparatorIndex >= 0 ? rawValue.slice(0, decimalSeparatorIndex) : rawValue)
+      .replace(/[^\d]/g, '')
+      .slice(0, 7);
+    const decimalPart = (decimalSeparatorIndex >= 0 ? rawValue.slice(decimalSeparatorIndex + 1) : '')
+      .replace(/[^\d]/g, '')
+      .slice(0, 2);
+
+    if (!integerPart && !decimalPart) {
+      return null;
+    }
+
+    const normalizedValue = decimalPart ? `${integerPart || '0'}.${decimalPart}` : (integerPart || '0');
+    const parsedValue = Number(normalizedValue);
+
+    return Number.isNaN(parsedValue) ? null : this.roundCurrency(parsedValue);
+  }
+
+  private sanitizeCommercialText(value: string | null, fallback: string, maxLength: number, allowEmpty = false): string {
+    const normalizedValue = String(value ?? '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, maxLength);
+
+    if (!normalizedValue) {
+      return allowEmpty ? '' : fallback;
+    }
+
+    return normalizedValue;
   }
 }

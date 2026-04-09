@@ -30,23 +30,69 @@
   </section>
 
   <section class="wa-filters wa-filters-secondary glass-card holowaty-filters">
-    <label>
-      Buscar producto o codigo
-      <input
-        type="text"
-        placeholder="Ej: 1001, Yerupe, 1 kg..."
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="applyFilters()"
-      >
-    </label>
+    <div class="holowaty-commercial-panel" aria-label="Configuracion comercial">
+      <div class="holowaty-commercial-panel-fields">
+        <label class="holowaty-commercial-field">
+          <span>Periodo lista de precios</span>
+          <input
+            type="text"
+            maxlength="30"
+            [ngModel]="listPeriodLabel"
+            (ngModelChange)="onListPeriodChange($event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
+            placeholder="Ej: Abril 2026"
+            aria-label="Periodo de la lista de precios"
+          >
+        </label>
 
-    <label>
-      Categoria
-      <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
-        <option value="">Todas las categorias</option>
-        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
-      </select>
-    </label>
+        <label class="holowaty-commercial-field">
+          <span>Condiciones de pago</span>
+          <input
+            type="text"
+            maxlength="24"
+            [ngModel]="paymentTermsLabel"
+            (ngModelChange)="onPaymentTermsChange($event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
+            placeholder="Ej: 30-45-60 dias"
+            aria-label="Plazos de condiciones de pago"
+          >
+        </label>
+
+        <label class="holowaty-commercial-field">
+          <span>Destino</span>
+          <input
+            type="text"
+            maxlength="30"
+            [ngModel]="destinationLabel"
+            (ngModelChange)="onDestinationChange($event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
+            placeholder="Ej: BsAs-Rosario-Cba."
+            aria-label="Destino comercial"
+          >
+        </label>
+
+        <label class="holowaty-commercial-field">
+          <span>Flete</span>
+          <input
+            type="text"
+            maxlength="24"
+            [ngModel]="freightLabel"
+            (ngModelChange)="onFreightLabelChange($event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
+            placeholder="Ej: Flete incluido"
+            aria-label="Leyenda de flete"
+          >
+        </label>
+      </div>
+    </div>
 
     <div class="filters-meta" aria-live="polite">
       <p>
@@ -57,42 +103,74 @@
 
   <section class="wa-list glass-card holowaty-list" *ngIf="!isLoading && !errorMessage">
     <div class="list-header holowaty-list-header">
-      <span>Producto</span>
-      <span>Unitario</span>
-      <span>Descuento Comercial</span>
-      <span>Neto</span>
-      <span>Ficha comercial</span>
+      <span>Descripcion</span>
+      <span>Precio Lista</span>
+      <span>Factura</span>
+      <span>1er Neto</span>
+      <span>% Comercial</span>
+      <span>2do Neto</span>
+      <span>3er Neto</span>
+      <span>IVA</span>
+      <span>P. Final</span>
+      <span>Destino</span>
     </div>
 
     <article class="list-row holowaty-row" *ngFor="let product of displayedProducts">
-      <div class="product-main">
+      <div class="product-main holowaty-description-col">
         <img *ngIf="product.image" class="product-thumb holowaty-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
-          <div class="holowaty-badges">
+          <div class="holowaty-badges holowaty-badges-main">
             <span class="holowaty-badge">{{ product.brand }}</span>
-            <span class="holowaty-badge secondary">Cod. {{ product.sku }}</span>
+            <span class="holowaty-badge secondary">Cod. {{ product.sku || '-' }}</span>
           </div>
           <h3>{{ product.name }}</h3>
-          <p class="holowaty-product-copy">{{ product.description }}</p>
-          <small>{{ getCategoryLabel(product) }}</small>
+          <small>{{ getCompactDescription(product) }}</small>
         </div>
       </div>
 
-      <div class="price-col holowaty-unit-price-col">
+      <div class="holowaty-cell holowaty-list-price-col">
+        <span class="holowaty-mobile-label">Precio Lista</span>
         <label class="holowaty-price-field">
           <span class="holowaty-currency-prefix">$</span>
           <input
             type="text"
             inputmode="decimal"
-            maxlength="10"
-            [ngModel]="getUnitPriceInputValue(product)"
-            (ngModelChange)="onUnitPriceChange(product, $event)"
-            aria-label="Precio unitario neto"
+            maxlength="14"
+            [ngModel]="getListPriceInputValue(product)"
+            (ngModelChange)="onListPriceChange(product, $event)"
+            (focus)="onListPriceFocus(product, $event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="onListPriceBlur(product, $event)"
+            aria-label="Precio de lista"
           >
         </label>
       </div>
 
-      <div class="discount-col holowaty-discount-col">
+      <div class="holowaty-cell holowaty-factura-col">
+        <span class="holowaty-mobile-label">Factura</span>
+        <label class="holowaty-discount-field">
+          <input
+            type="text"
+            inputmode="decimal"
+            maxlength="5"
+            [ngModel]="getInvoiceDiscountInputValue(product)"
+            (ngModelChange)="onInvoiceDiscountChange(product, $event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
+            aria-label="Descuento de factura en porcentaje"
+          >
+          <span>%</span>
+        </label>
+      </div>
+
+      <div class="holowaty-cell holowaty-net-col">
+        <span class="holowaty-mobile-label">1er Neto</span>
+        <strong>{{ formatPrice(getFirstNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-commercial-input-col">
+        <span class="holowaty-mobile-label">% Comercial</span>
         <label class="holowaty-discount-field">
           <input
             type="text"
@@ -100,25 +178,41 @@
             maxlength="5"
             [ngModel]="getCommercialDiscountInputValue(product)"
             (ngModelChange)="onCommercialDiscountChange(product, $event)"
+            (focus)="selectInputValue($event)"
+            (beforeinput)="replaceInputValueOnType($event)"
+            (blur)="resetInputReplaceState($event)"
             aria-label="Descuento comercial en porcentaje"
           >
           <span>%</span>
         </label>
       </div>
 
-      <div class="price-col holowaty-price-col">
-        <strong>{{ formatPrice(getDiscountedNetPrice(product)) }}</strong>
+      <div class="holowaty-cell holowaty-net-col">
+        <span class="holowaty-mobile-label">2do Neto</span>
+        <strong>{{ formatPrice(getSecondNetPrice(product)) }}</strong>
       </div>
 
-      <div class="holowaty-commercial-col">
-        <p *ngIf="getCommercialDiscountPercent(product) > 0">
-          Descuento comercial: {{ getCommercialDiscountPercent(product) }}%
-        </p>
-        <p>Neto: {{ formatPrice(getDiscountedNetPrice(product)) }}</p>
-        <p>IVA: {{ getTaxRate(product) * 100 }}%</p>
-        <p>Bruto: {{ formatPrice(getDiscountedGrossPrice(product)) }}</p>
-        <p>Precio por kilo: {{ formatPrice(getDiscountedPricePerKilo(product)) }}</p>
-        <p>Bultos por pallet: {{ getPalletUnits(product) }}</p>
+      <div class="holowaty-cell holowaty-net-col holowaty-highlight-col">
+        <span class="holowaty-mobile-label">3er Neto</span>
+        <strong>{{ formatPrice(getThirdNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-tax-col">
+        <span class="holowaty-mobile-label">IVA</span>
+        <strong>{{ formatPrice(getTaxAmount(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-final-col">
+        <span class="holowaty-mobile-label">P. Final</span>
+        <strong>{{ formatPrice(getFinalPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-destination-col">
+        <span class="holowaty-mobile-label">Destino</span>
+        <div class="holowaty-destination-copy">
+          <strong>{{ destinationLabel }}</strong>
+          <small *ngIf="freightLabel">{{ freightLabel }}</small>
+        </div>
       </div>
     </article>
 
@@ -132,21 +226,40 @@
       <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
       <button type="button" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">Siguiente</button>
     </div>
+
+    <footer class="holowaty-terms-bar">
+      <div class="holowaty-term-item">
+        <span>Periodo</span>
+        <strong>{{ listPeriodLabel }}</strong>
+      </div>
+      <div class="holowaty-term-item">
+        <span>Condicion de Pago</span>
+        <strong>{{ paymentTermsLabel }}</strong>
+      </div>
+    </footer>
   </section>
 
   <footer class="holowaty-pdf-bar glass-card" *ngIf="!isLoading && !errorMessage">
     <div class="holowaty-pdf-copy">
       <p>Catalogo listo para compartir</p>
       <strong>{{ filteredProducts.length || products.length }} productos para exportar</strong>
-      <small>El PDF incluye los descuentos comerciales visibles y el neto recalculado.</small>
+      <small>El PDF incluye precio de lista, factura, descuento comercial, IVA y precio final.</small>
     </div>
 
     <div class="holowaty-pdf-actions">
-      <button type="button" class="btn-send holowaty-send" (click)="downloadCatalogPdf()" [disabled]="products.length === 0 || isGeneratingPdf">
-        {{ isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF' }}
+      <button type="button" class="btn-send holowaty-send holowaty-send-secondary" (click)="downloadCommercialPdf()" [disabled]="products.length === 0 || isGeneratingPdfCommercial">
+        {{ isGeneratingPdfCommercial ? 'Generando PDF 2...' : 'Descargar PDF 2' }}
       </button>
     </div>
   </footer>
+
+  <div class="holowaty-loading-overlay" *ngIf="isGeneratingPdfCommercial" aria-live="assertive" aria-busy="true">
+    <div class="holowaty-loading-card glass-card" role="status">
+      <span class="holowaty-loading-spinner" aria-hidden="true"></span>
+      <p>Generando PDF comercial</p>
+      <strong>Espera un momento, estamos preparando la descarga.</strong>
+    </div>
+  </div>
 </section>
 
 <section class="holowaty-pdf-export" #pdfExportContent *ngIf="!isLoading && !errorMessage">
@@ -174,53 +287,92 @@
 
   <section class="wa-list glass-card holowaty-list holowaty-export-list">
     <div class="list-header holowaty-list-header">
-      <span>Producto</span>
-      <span>Unitario</span>
-      <span>Descuento Comercial</span>
-      <span>Neto</span>
-      <span>Ficha comercial</span>
+      <span>Pallet</span>
+      <span>Descripcion</span>
+      <span>Precio Lista</span>
+      <span>Factura</span>
+      <span>1er Neto</span>
+      <span>% Comercial</span>
+      <span>2do Neto</span>
+      <span>3er Neto</span>
+      <span>IVA</span>
+      <span>P. Final</span>
+      <span>Destino</span>
     </div>
 
     <article class="list-row holowaty-row" *ngFor="let product of getProductsForPdfExport()">
-      <div class="product-main">
+      <div class="holowaty-cell holowaty-pallet-col">
+        <strong>{{ getPalletMark(product) }}</strong>
+      </div>
+
+      <div class="product-main holowaty-description-col">
         <img *ngIf="product.image" class="product-thumb holowaty-thumb" [src]="product.image" [alt]="product.name">
         <div class="product-text">
-          <div class="holowaty-badges">
+          <div class="holowaty-badges holowaty-badges-main">
             <span class="holowaty-badge">{{ product.brand }}</span>
-            <span class="holowaty-badge secondary">Cod. {{ product.sku }}</span>
+            <span class="holowaty-badge secondary">Cod. {{ product.sku || '-' }}</span>
           </div>
           <h3>{{ product.name }}</h3>
-          <p class="holowaty-product-copy">{{ product.description }}</p>
-          <small>{{ getCategoryLabel(product) }}</small>
+          <small>{{ getCompactDescription(product) }}</small>
         </div>
       </div>
 
-      <div class="price-col holowaty-unit-price-col">
-        <strong>{{ formatPrice(getNetPrice(product)) }}</strong>
+      <div class="holowaty-cell holowaty-list-price-col">
+        <strong>{{ formatPrice(getListPrice(product)) }}</strong>
       </div>
 
-      <div class="discount-col holowaty-discount-col">
+      <div class="holowaty-cell holowaty-factura-col">
         <div class="holowaty-discount-field holowaty-discount-static">
-          <span>{{ getCommercialDiscountInputValue(product) || '0' }}</span>
+          <span>{{ getInvoiceDiscountInputValue(product) }}</span>
           <span>%</span>
         </div>
       </div>
 
-      <div class="price-col holowaty-price-col">
-        <strong>{{ formatPrice(getDiscountedNetPrice(product)) }}</strong>
+      <div class="holowaty-cell holowaty-net-col">
+        <strong>{{ formatPrice(getFirstNetPrice(product)) }}</strong>
       </div>
 
-      <div class="holowaty-commercial-col">
-        <p *ngIf="getCommercialDiscountPercent(product) > 0">
-          Descuento comercial: {{ getCommercialDiscountPercent(product) }}%
-        </p>
-        <p>Neto: {{ formatPrice(getDiscountedNetPrice(product)) }}</p>
-        <p>IVA: {{ getTaxRate(product) * 100 }}%</p>
-        <p>Bruto: {{ formatPrice(getDiscountedGrossPrice(product)) }}</p>
-        <p>Precio por kilo: {{ formatPrice(getDiscountedPricePerKilo(product)) }}</p>
-        <p>Bultos por pallet: {{ getPalletUnits(product) }}</p>
+      <div class="holowaty-cell holowaty-commercial-input-col">
+        <div class="holowaty-discount-field holowaty-discount-static">
+          <span>{{ getCommercialDiscountInputValue(product) }}</span>
+          <span>%</span>
+        </div>
+      </div>
+
+      <div class="holowaty-cell holowaty-net-col">
+        <strong>{{ formatPrice(getSecondNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-net-col holowaty-highlight-col">
+        <strong>{{ formatPrice(getThirdNetPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-tax-col">
+        <strong>{{ formatPrice(getTaxAmount(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-final-col">
+        <strong>{{ formatPrice(getFinalPrice(product)) }}</strong>
+      </div>
+
+      <div class="holowaty-cell holowaty-destination-col">
+        <div class="holowaty-destination-copy">
+          <strong>{{ destinationLabel }}</strong>
+          <small *ngIf="freightLabel">{{ freightLabel }}</small>
+        </div>
       </div>
     </article>
+
+    <footer class="holowaty-terms-bar holowaty-export-terms-bar">
+      <div class="holowaty-term-item">
+        <span>Periodo</span>
+        <strong>{{ listPeriodLabel }}</strong>
+      </div>
+      <div class="holowaty-term-item">
+        <span>Condicion de Pago</span>
+        <strong>{{ paymentTermsLabel }}</strong>
+      </div>
+    </footer>
   </section>
 </section>
 
