@@ -1,0 +1,81 @@
+:host {
+  padding-bottom: 160px;
+}
+
+.wholesale-page {
+  margin-bottom: 9rem;
+}
+
+.btn-pdf {
+  min-width: 164px;
+  background: linear-gradient(145deg, #607941 0%, #435a2b 100%);
+  box-shadow: 0 10px 22px rgb(34 54 19 / 28%);
+}
+
+.btn-pdf:hover {
+  box-shadow: 0 14px 28px rgb(34 54 19 / 34%);
+}
+
+.wholesale-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(31 47 18 / 28%);
+  backdrop-filter: blur(4px);
+}
+
+.wholesale-loading-card {
+  width: min(420px, calc(100% - 1.5rem));
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.15rem 1.2rem;
+  text-align: center;
+  border-color: #c6d19f;
+}
+
+.wholesale-loading-card p,
+.wholesale-loading-card strong {
+  margin: 0;
+}
+
+.wholesale-loading-spinner {
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 999px;
+  border: 3px solid rgb(111 148 64 / 24%);
+  border-top-color: #5f8437;
+  animation: wholesale-spinner 0.85s linear infinite;
+}
+
+@keyframes wholesale-spinner {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .summary-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .summary-actions .btn-pdf,
+  .summary-actions .btn-send,
+  .summary-actions .btn-clear {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  :host {
+    padding-bottom: 220px;
+  }
+}
