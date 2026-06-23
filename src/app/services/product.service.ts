@@ -13,8 +13,8 @@ export class ProductService {
       name: 'YM DON JULIAN 10x500g PACK',
       description: 'Yerba mate DON JULIAN pack mayorista 10x500g',
       stock: 100,
-      price: 17000,
-      wholesale_price: 17000,
+      price: 18000,
+      wholesale_price: 18000,
       category_name: 'Yerba Mate',
       image: 'assets/products/don-julian-nueva.jpeg',
       unit_of_measure: 'pack'
