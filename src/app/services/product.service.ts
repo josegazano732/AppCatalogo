@@ -94,7 +94,7 @@ export class ProductService {
       id: 'commerce-pos-1',
       name: 'YM 10x1000g Caricias de Mate SUAVE',
       description: 'Yerba mate Caricias de Mate suave x1000g para comercios y puntos de venta',
-      stock: 100,
+      stock: 101,
       price: 25531,
       wholesale_price: 25531,
       category_name: 'Yerba Mate',
