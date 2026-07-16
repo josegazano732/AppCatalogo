@@ -161,7 +161,7 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.errorMessage = '';
 
-    const productsSub = this.productService.getProducts().subscribe({
+    const productsSub = this.productService.getDistributorCatalogProducts().subscribe({
       next: (products: Product[]) => {
         const enabledCategories = new Set(this.palletCategories.map((item) => this.normalizeText(item)));
         const distributorProducts = products.map((product: Product) => this.toDistributorProduct(product));
@@ -723,7 +723,6 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
   private toDistributorProduct(product: Product): Product {
     const normalizedName = this.normalizeText(product.name);
     let distributorName = product.name;
-    const distributorWholesalePrice = this.resolveDistributorWholesalePrice(product, normalizedName);
 
     if (normalizedName.includes('don julian') && normalizedName.includes('10x500g')) {
       distributorName = 'YM DON JULIAN 500g PALLET x96 PACK';
@@ -751,49 +750,8 @@ export class DistributorPalletCatalogComponent implements OnInit, OnDestroy {
 
     return {
       ...product,
-      name: distributorName,
-      wholesale_price: distributorWholesalePrice
+      name: distributorName
     };
-  }
-
-  private resolveDistributorWholesalePrice(product: Product, normalizedName: string): number {
-    if (normalizedName.includes('mate cocido') && normalizedName.includes('x20')) {
-      return 790 * 20;
-    }
-
-    if (
-      normalizedName.includes('mateite')
-      && normalizedName.includes('premium')
-      && (normalizedName.includes('10x500g') || normalizedName.includes('500g'))
-    ) {
-      return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
-    }
-
-    if (normalizedName.includes('don julian') && normalizedName.includes('10x1kg')) {
-      return 2480.5 * 10;
-    }
-
-    if (normalizedName.includes('mateite') && normalizedName.includes('10x1kg')) {
-      return 2722.5 * 10;
-    }
-
-    if (normalizedName.includes('yerbella') && normalizedName.includes('10x500g')) {
-      return 3499.32 * 10;
-    }
-
-    if (normalizedName.includes('don julian') && normalizedName.includes('10x500g')) {
-      return 1270.5 * 10;
-    }
-
-    if (
-      normalizedName.includes('mateite')
-      && normalizedName.includes('10x500g')
-      && !normalizedName.includes('premium')
-    ) {
-      return 1391.5 * 10;
-    }
-
-    return (product.wholesale_price ?? 0) > 0 ? (product.wholesale_price as number) : product.price;
   }
 
   private initializeCustomMixQuantities(): void {

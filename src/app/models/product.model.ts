@@ -14,6 +14,7 @@ export interface Product {
   brand?: string;
   pallet_units?: number;
   price_per_kilo?: number;
+  list_price?: number;
   unit_net_price?: number;
   net_price?: number;
   tax_rate?: number;

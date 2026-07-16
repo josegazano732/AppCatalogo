@@ -1,12 +1,93 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, catchError, from, map, of, switchMap } from 'rxjs';
 
 import { Product } from '../models/product.model';
+import { SupabaseService } from './supabase.service';
+
+export type PriceCatalogId = 'whatsapp' | 'commerce-pos' | 'distributor-pallet' | 'wholesale' | 'retail' | 'holowaty';
+
+export interface PriceCatalog {
+  id: PriceCatalogId;
+  name: string;
+  description: string;
+  route: string;
+  priceLabel: string;
+}
+
+export interface ProductPriceUpdate {
+  productId: string;
+  price: number;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
+  private readonly priceOverridesStorageKey = 'app-catalogo-price-overrides-v1';
+  private readonly holowatyListPrices: Record<string, number> = {
+    'YERUPE Yerba Mate 500 g': 1260,
+    'ALAZAN Yerba Mate 500 g': 1134,
+    'SELLO ROJO Yerba Mate 500 g': 1066,
+    'SELLO NEGRO Yerba Mate 500 g': 916,
+    'YERUPE Yerba Mate 1 kg': 2520,
+    'ALAZAN Yerba Mate 1 kg': 2238,
+    'SELLO ROJO Yerba Mate 1 kg': 2116,
+    'SELLO NEGRO Yerba Mate 1 kg': 1786
+  };
+  private readonly distributorPackPrices: Record<string, number> = {
+    '1': 12705,
+    '2': 24805,
+    '3': 13915,
+    '4': 27225,
+    '5': 34993.2,
+    '6': 15800,
+    '7': 35000
+  };
+  private readonly priceCatalogs: PriceCatalog[] = [
+    {
+      id: 'whatsapp',
+      name: 'Catalogo WhatsApp',
+      description: 'Lista principal de packs para pedidos por WhatsApp.',
+      route: '/',
+      priceLabel: 'Precio por pack'
+    },
+    {
+      id: 'commerce-pos',
+      name: 'Comercios y puntos de venta',
+      description: 'Packs destinados a comercios y puntos de venta.',
+      route: '/catalogo-comercios-punto-de-ventas',
+      priceLabel: 'Precio por pack'
+    },
+    {
+      id: 'distributor-pallet',
+      name: 'Distribuidora por pallet',
+      description: 'Precio base por pack usado para calcular cada pallet.',
+      route: '/catalogo-distribuidora-pallet',
+      priceLabel: 'Precio base por pack'
+    },
+    {
+      id: 'wholesale',
+      name: 'Catalogo mayorista',
+      description: 'Lista mayorista por unidad y presentacion.',
+      route: '/catalogo-mayorista',
+      priceLabel: 'Precio mayorista'
+    },
+    {
+      id: 'retail',
+      name: 'Catalogo minorista',
+      description: 'Precios finales del canal minorista.',
+      route: '/catalogo-minorista',
+      priceLabel: 'Precio minorista'
+    },
+    {
+      id: 'holowaty',
+      name: 'Lista Holowaty',
+      description: 'Precio de lista usado para calcular descuentos y netos.',
+      route: '/holowaty',
+      priceLabel: 'Precio de lista'
+    }
+  ];
+
   private readonly baseProducts: Product[] = [
     {
       id: '1',
@@ -619,24 +700,157 @@ export class ProductService {
     }
   ];
 
+  constructor(private readonly supabase: SupabaseService) {}
+
   getProducts(): Observable<Product[]> {
-    return of(this.cloneProducts(this.baseProducts));
+    return this.getCatalogProducts('whatsapp');
   }
 
   getCommercePosProducts(): Observable<Product[]> {
-    return of(this.cloneProducts([...this.baseProducts, ...this.commercePosExtraProducts]));
+    return this.getCatalogProducts('commerce-pos');
+  }
+
+  getDistributorCatalogProducts(): Observable<Product[]> {
+    return this.getCatalogProducts('distributor-pallet');
   }
 
   getWholesaleCatalogProducts(): Observable<Product[]> {
-    return of(this.cloneProducts(this.wholesaleCatalogProducts));
+    return this.getCatalogProducts('wholesale');
   }
 
   getRetailCatalogProducts(): Observable<Product[]> {
-    return of(this.cloneProducts(this.retailCatalogProducts));
+    return this.getCatalogProducts('retail');
   }
 
   getHolowatyCatalogProducts(): Observable<Product[]> {
-    return of(this.cloneProducts(this.holowatyCatalogProducts));
+    return this.getCatalogProducts('holowaty');
+  }
+
+  getPriceCatalogs(): PriceCatalog[] {
+    return this.priceCatalogs.map((catalog: PriceCatalog) => ({ ...catalog }));
+  }
+
+  getPriceCatalogProducts(catalogId: PriceCatalogId): Observable<Product[]> {
+    return this.getCatalogProducts(catalogId);
+  }
+
+  saveCatalogPrices(catalogId: PriceCatalogId, updates: ProductPriceUpdate[]): Observable<Product[]> {
+    return from(this.supabase.isSchemaAvailable()).pipe(
+      switchMap((schemaAvailable: boolean) => {
+        if (!schemaAvailable) {
+          return of(this.saveLocalCatalogPrices(catalogId, updates));
+        }
+
+        return from(this.supabase.saveCatalogPrices(catalogId, updates)).pipe(
+          map(() => this.saveLocalCatalogPrices(catalogId, updates))
+        );
+      })
+    );
+  }
+
+  private saveLocalCatalogPrices(catalogId: PriceCatalogId, updates: ProductPriceUpdate[]): Product[] {
+    const overrides = this.readPriceOverrides();
+    const catalogOverrides = { ...(overrides[catalogId] ?? {}) };
+
+    updates.forEach((update: ProductPriceUpdate) => {
+      if (Number.isFinite(update.price) && update.price > 0) {
+        catalogOverrides[update.productId] = Number(update.price.toFixed(2));
+      }
+    });
+
+    overrides[catalogId] = catalogOverrides;
+    localStorage.setItem(this.priceOverridesStorageKey, JSON.stringify(overrides));
+
+    return this.getCatalogProductsSnapshot(catalogId);
+  }
+
+  private getCatalogProducts(catalogId: PriceCatalogId): Observable<Product[]> {
+    const localProducts = this.getCatalogProductsSnapshot(catalogId);
+
+    return from(this.supabase.getCatalogPrices(catalogId)).pipe(
+      map((remotePrices: Record<string, number>) => this.applyRemotePrices(localProducts, catalogId, remotePrices)),
+      catchError(() => of(localProducts))
+    );
+  }
+
+  private applyRemotePrices(
+    products: Product[],
+    catalogId: PriceCatalogId,
+    remotePrices: Record<string, number>
+  ): Product[] {
+    return products.map((product: Product) => {
+      const remotePrice = remotePrices[product.id];
+
+      if (!Number.isFinite(remotePrice) || remotePrice <= 0) {
+        return product;
+      }
+
+      if (catalogId === 'holowaty') {
+        return { ...product, list_price: remotePrice };
+      }
+
+      return { ...product, price: remotePrice, wholesale_price: remotePrice };
+    });
+  }
+
+  private getCatalogProductsSnapshot(catalogId: PriceCatalogId): Product[] {
+    let products: Product[];
+
+    switch (catalogId) {
+      case 'commerce-pos':
+        products = [...this.baseProducts, ...this.commercePosExtraProducts];
+        break;
+      case 'wholesale':
+        products = this.wholesaleCatalogProducts;
+        break;
+      case 'retail':
+        products = this.retailCatalogProducts;
+        break;
+      case 'holowaty':
+        products = this.holowatyCatalogProducts;
+        break;
+      case 'distributor-pallet':
+        products = this.baseProducts.map((product: Product) => ({
+          ...product,
+          price: this.distributorPackPrices[product.id] ?? product.price,
+          wholesale_price: this.distributorPackPrices[product.id] ?? product.wholesale_price
+        }));
+        break;
+      default:
+        products = this.baseProducts;
+    }
+
+    const catalogOverrides = this.readPriceOverrides()[catalogId] ?? {};
+
+    return this.cloneProducts(products).map((product: Product) => {
+      const overriddenPrice = catalogOverrides[product.id];
+
+      if (typeof overriddenPrice !== 'number') {
+        return catalogId === 'holowaty'
+          ? { ...product, list_price: this.holowatyListPrices[product.name] ?? product.list_price }
+          : product;
+      }
+
+      if (catalogId === 'holowaty') {
+        return { ...product, list_price: overriddenPrice };
+      }
+
+      return { ...product, price: overriddenPrice, wholesale_price: overriddenPrice };
+    });
+  }
+
+  private readPriceOverrides(): Partial<Record<PriceCatalogId, Record<string, number>>> {
+    const storedOverrides = localStorage.getItem(this.priceOverridesStorageKey);
+
+    if (!storedOverrides) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(storedOverrides) as Partial<Record<PriceCatalogId, Record<string, number>>>;
+    } catch {
+      return {};
+    }
   }
 
   private cloneProducts(products: Product[]): Product[] {

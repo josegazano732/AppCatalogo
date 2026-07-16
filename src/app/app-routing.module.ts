@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
+import { PriceAdminComponent } from './admin/price-admin/price-admin.component';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { HolowatyCatalogComponent } from './products/holowaty-catalog/holowaty-catalog.component';
@@ -9,6 +10,10 @@ import { WhatsappCatalogComponent } from './products/whatsapp-catalog/whatsapp-c
 import { WholesaleCatalogComponent } from './products/wholesale-catalog/wholesale-catalog.component';
 
 const routes: Routes = [
+  {
+    path: 'administracion/precios',
+    component: PriceAdminComponent
+  },
   {
     path: '',
     component: WhatsappCatalogComponent

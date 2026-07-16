@@ -9,6 +9,7 @@ import { filter } from 'rxjs';
 })
 export class AppComponent {
   isHolowatyRoute = false;
+  isAdminRoute = false;
 
   constructor(private readonly router: Router) {
     this.syncRouteState(this.router.url);
@@ -22,5 +23,6 @@ export class AppComponent {
 
   private syncRouteState(url: string): void {
     this.isHolowatyRoute = url.includes('/holowaty');
+    this.isAdminRoute = url.includes('/administracion/');
   }
 }

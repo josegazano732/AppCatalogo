@@ -1,0 +1,217 @@
+<main class="admin-shell">
+  <header class="admin-header">
+    <div class="admin-brand">
+      <img src="assets/branding/amate-logo.jpg" alt="AMATE">
+      <div>
+        <span>Panel administrativo</span>
+        <h1>Gestion de precios</h1>
+      </div>
+    </div>
+    <a *ngIf="isAdmin" class="preview-link" [routerLink]="selectedCatalog.route" target="_blank" rel="noreferrer">
+      <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+      Ver catalogo
+    </a>
+  </header>
+
+  <section class="auth-page" *ngIf="!isAdmin">
+    <div class="auth-panel">
+      <div class="auth-icon"><i class="fas fa-lock" aria-hidden="true"></i></div>
+      <span class="section-kicker">Acceso restringido</span>
+      <h2>{{ accessState === 'unauthorized' ? 'Cuenta sin permisos' : 'Administracion' }}</h2>
+      <p *ngIf="accessState === 'loading'">Verificando sesion con Supabase...</p>
+
+      <form *ngIf="accessState === 'signed-out'" (ngSubmit)="submitAuth()">
+        <label>
+          <span>Correo</span>
+          <input type="email" autocomplete="email" [(ngModel)]="authEmail" name="email" required>
+        </label>
+        <label>
+          <span>Contrasena</span>
+          <input
+            type="password"
+            [attr.autocomplete]="authMode === 'sign-in' ? 'current-password' : 'new-password'"
+            [(ngModel)]="authPassword"
+            name="password"
+            minlength="6"
+            required
+          >
+        </label>
+        <button type="submit" class="auth-submit" [disabled]="isAuthSubmitting">
+          <i class="fas" [class.fa-sign-in-alt]="!isAuthSubmitting" [class.fa-circle-notch]="isAuthSubmitting" [class.fa-spin]="isAuthSubmitting" aria-hidden="true"></i>
+          {{ isAuthSubmitting ? 'Procesando...' : (authMode === 'sign-in' ? 'Ingresar' : 'Crear cuenta') }}
+        </button>
+        <button type="button" class="auth-toggle" (click)="toggleAuthMode()">
+          {{ authMode === 'sign-in' ? 'Crear una cuenta administrativa' : 'Ya tengo una cuenta' }}
+        </button>
+      </form>
+
+      <button *ngIf="accessState === 'unauthorized'" type="button" class="auth-submit" (click)="signOut()">
+        Cerrar sesion
+      </button>
+
+      <div class="auth-message" *ngIf="authMessage" [class.error]="authMessageTone === 'error'" role="status">
+        {{ authMessage }}
+      </div>
+    </div>
+  </section>
+
+  <div class="admin-layout" *ngIf="isAdmin">
+    <aside class="catalog-sidebar" aria-label="Catalogos disponibles">
+      <div class="sidebar-heading">
+        <span>Catalogos</span>
+        <strong>{{ catalogs.length }}</strong>
+      </div>
+      <button
+        *ngFor="let catalog of catalogs"
+        type="button"
+        class="catalog-option"
+        [class.active]="catalog.id === selectedCatalogId"
+        (click)="selectCatalog(catalog.id)"
+      >
+        <i class="fas fa-list-alt" aria-hidden="true"></i>
+        <span>
+          <strong>{{ catalog.name }}</strong>
+          <small>{{ catalog.priceLabel }}</small>
+        </span>
+        <i class="fas fa-chevron-right option-arrow" aria-hidden="true"></i>
+      </button>
+      <p class="storage-note">
+        <i class="fas fa-database" aria-hidden="true"></i>
+        Supabase conectado
+      </p>
+      <button type="button" class="sidebar-signout" (click)="signOut()">
+        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+        Cerrar sesion
+      </button>
+    </aside>
+
+    <section class="admin-content">
+      <div class="catalog-heading">
+        <div>
+          <span class="section-kicker">Catalogo seleccionado</span>
+          <h2>{{ selectedCatalog.name }}</h2>
+          <p>{{ selectedCatalog.description }}</p>
+        </div>
+        <div class="product-total">
+          <strong>{{ products.length }}</strong>
+          <span>productos</span>
+        </div>
+      </div>
+
+      <section class="admin-toolbar" aria-label="Herramientas de precios">
+        <label class="search-field">
+          <span>Buscar producto</span>
+          <div class="control-with-icon">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input
+              type="search"
+              placeholder="Nombre, marca o codigo"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="applyFilters()"
+            >
+          </div>
+        </label>
+
+        <label>
+          <span>Categoria</span>
+          <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
+            <option value="">Todas</option>
+            <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+          </select>
+        </label>
+
+        <div class="bulk-field">
+          <label for="percentage">Ajuste sobre visibles</label>
+          <div class="percentage-control">
+            <input
+              id="percentage"
+              type="text"
+              inputmode="decimal"
+              placeholder="Ej: 8 o -5"
+              [(ngModel)]="percentageDraft"
+            >
+            <span>%</span>
+            <button type="button" (click)="applyPercentage()" [disabled]="filteredProducts.length === 0">
+              Aplicar
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="feedback" *ngIf="feedbackMessage" [class.error]="feedbackTone === 'error'" role="status">
+        <i class="fas" [class.fa-check-circle]="feedbackTone === 'success'" [class.fa-exclamation-circle]="feedbackTone === 'error'" aria-hidden="true"></i>
+        {{ feedbackMessage }}
+      </div>
+
+      <section class="price-table" aria-label="Edicion de precios">
+        <div class="table-head">
+          <span>Producto</span>
+          <span>Precio actual</span>
+          <span>Nuevo precio</span>
+          <span>Estado</span>
+        </div>
+
+        <div class="loading-state" *ngIf="isLoading">
+          <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+          Cargando productos...
+        </div>
+
+        <article
+          class="price-row"
+          *ngFor="let product of filteredProducts; trackBy: trackProduct"
+          [class.changed]="isProductChanged(product)"
+        >
+          <div class="product-cell">
+            <div class="product-image">
+              <img *ngIf="product.image" [src]="product.image" [alt]="product.name">
+              <i *ngIf="!product.image" class="fas fa-box" aria-hidden="true"></i>
+            </div>
+            <div>
+              <strong>{{ product.name }}</strong>
+              <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.sku"> · Cod. {{ product.sku }}</ng-container></small>
+            </div>
+          </div>
+          <div class="current-price" data-label="Precio actual">
+            {{ formatPrice(getOriginalPrice(product)) }}
+          </div>
+          <label class="price-input" [class.invalid]="priceDrafts[product.id] === ''">
+            <span>$</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              [ngModel]="priceDrafts[product.id]"
+              (ngModelChange)="updatePriceDraft(product, $event)"
+              [attr.aria-label]="'Nuevo precio de ' + product.name"
+            >
+          </label>
+          <div class="row-status">
+            <span *ngIf="isProductChanged(product)" class="status-edited"><i class="fas fa-pen" aria-hidden="true"></i> Editado</span>
+            <span *ngIf="!isProductChanged(product)" class="status-current"><i class="fas fa-check" aria-hidden="true"></i> Actual</span>
+          </div>
+        </article>
+
+        <div class="empty-state" *ngIf="!isLoading && filteredProducts.length === 0">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <strong>No encontramos productos</strong>
+          <span>Prueba con otra busqueda o categoria.</span>
+        </div>
+      </section>
+
+      <footer class="save-bar">
+        <div>
+          <strong>{{ changedProductsCount }}</strong>
+          <span>{{ changedProductsCount === 1 ? 'precio modificado' : 'precios modificados' }}</span>
+        </div>
+        <div class="save-actions">
+          <button type="button" class="discard-button" (click)="resetChanges()" [disabled]="changedProductsCount === 0 || isSaving">
+            Descartar
+          </button>
+          <button type="button" class="save-button" (click)="saveChanges()" [disabled]="changedProductsCount === 0 || isSaving">
+            <i class="fas" [class.fa-save]="!isSaving" [class.fa-circle-notch]="isSaving" [class.fa-spin]="isSaving" aria-hidden="true"></i>
+            {{ isSaving ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </footer>
+    </section>
+  </div>
+</main>

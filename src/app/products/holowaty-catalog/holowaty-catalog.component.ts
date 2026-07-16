@@ -927,6 +927,10 @@ export class HolowatyCatalogComponent implements OnInit, OnDestroy {
   }
 
   private getBaseListPrice(product: Product): number {
+    if (typeof product.list_price === 'number') {
+      return product.list_price;
+    }
+
     const configuredListPrice = this.defaultListPricesByName[product.name];
 
     if (typeof configuredListPrice === 'number') {
