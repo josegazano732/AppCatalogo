@@ -7,7 +7,7 @@ import {
   ProductPriceUpdate,
   ProductService
 } from '../../services/product.service';
-import { SupabaseService } from '../../services/supabase.service';
+import { CatalogPdfDocument, SupabaseService } from '../../services/supabase.service';
 
 type AdminAccessState = 'loading' | 'signed-out' | 'unauthorized' | 'admin';
 
@@ -30,6 +30,8 @@ export class PriceAdminComponent implements OnInit {
   percentageDraft = '';
   isLoading = false;
   isSaving = false;
+  isUploadingPdf = false;
+  isDeletingPdf = false;
   feedbackMessage = '';
   feedbackTone: 'success' | 'error' | '' = '';
   accessState: AdminAccessState = 'loading';
@@ -39,6 +41,10 @@ export class PriceAdminComponent implements OnInit {
   authMessage = '';
   authMessageTone: 'success' | 'error' | '' = '';
   isAuthSubmitting = false;
+  showPassword = false;
+  catalogPdfDocuments: CatalogPdfDocument[] = [];
+  selectedCatalogPdfId = '';
+  pdfLinkDraft = '';
 
   private originalPrices: Record<string, number> = {};
 
@@ -99,7 +105,12 @@ export class PriceAdminComponent implements OnInit {
   toggleAuthMode(): void {
     this.authMode = this.authMode === 'sign-in' ? 'sign-up' : 'sign-in';
     this.authPassword = '';
+    this.showPassword = false;
     this.authMessage = '';
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   async signOut(): Promise<void> {
@@ -239,6 +250,112 @@ export class PriceAdminComponent implements OnInit {
     return product.id;
   }
 
+  async onPdfSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      this.showFeedback('Solo se permiten archivos PDF para este catalogo.', 'error');
+      input.value = '';
+      return;
+    }
+
+    this.isUploadingPdf = true;
+    this.clearFeedback();
+
+    try {
+      await this.supabase.uploadCatalogPdf(this.selectedCatalogId, file);
+      await this.loadSelectedCatalogPdf();
+      this.showFeedback(`Se agrego un PDF para ${this.selectedCatalog.name}. Total: ${this.catalogPdfDocuments.length}.`, 'success');
+    } catch (error: unknown) {
+      const message = this.getPdfUploadErrorMessage(error);
+      this.showFeedback(message, 'error');
+      if (message.toLowerCase().includes('bucket') || message.toLowerCase().includes('not found') || message.toLowerCase().includes('storage')) {
+        this.pdfLinkDraft = '';
+      }
+    } finally {
+      this.isUploadingPdf = false;
+      input.value = '';
+    }
+  }
+
+  async saveCatalogPdfLink(): Promise<void> {
+    const publicUrl = this.pdfLinkDraft.trim();
+    if (!publicUrl) {
+      this.showFeedback('Pegá un enlace publico del PDF para guardarlo.', 'error');
+      return;
+    }
+
+    this.isUploadingPdf = true;
+    this.clearFeedback();
+
+    try {
+      await this.supabase.saveCatalogPdfLink(this.selectedCatalogId, publicUrl);
+      await this.loadSelectedCatalogPdf();
+      this.pdfLinkDraft = '';
+      this.showFeedback(`Se agrego el enlace del PDF para ${this.selectedCatalog.name}. Total: ${this.catalogPdfDocuments.length}.`, 'success');
+    } catch (error: unknown) {
+      this.showFeedback(this.getPdfUploadErrorMessage(error), 'error');
+    } finally {
+      this.isUploadingPdf = false;
+    }
+  }
+
+  async copyCatalogPdfLink(pdfUrl: string): Promise<void> {
+    if (!pdfUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(pdfUrl);
+      this.showFeedback('El enlace del PDF se copio al portapapeles.', 'success');
+    } catch {
+      this.showFeedback('No se pudo copiar el enlace automaticamente.', 'error');
+    }
+  }
+
+  selectPdfDocument(documentId: string): void {
+    this.selectedCatalogPdfId = documentId;
+  }
+
+  async deleteSelectedPdf(): Promise<void> {
+    if (!this.selectedCatalogPdfId || this.isDeletingPdf) {
+      return;
+    }
+
+    const selectedDocument = this.catalogPdfDocuments.find((document: CatalogPdfDocument) => document.id === this.selectedCatalogPdfId);
+    if (!selectedDocument) {
+      this.showFeedback('Selecciona un PDF valido antes de eliminar.', 'error');
+      return;
+    }
+
+    const shouldDelete = window.confirm(`¿Eliminar el PDF "${selectedDocument.fileName}"? Esta accion no se puede deshacer.`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    this.isDeletingPdf = true;
+    this.clearFeedback();
+
+    try {
+      await this.supabase.deleteCatalogPdfDocument(this.selectedCatalogId, selectedDocument);
+      await this.loadSelectedCatalogPdf();
+      this.showFeedback('PDF eliminado correctamente.', 'success');
+    } catch (error: unknown) {
+      this.showFeedback(this.getPdfUploadErrorMessage(error), 'error');
+    } finally {
+      this.isDeletingPdf = false;
+    }
+  }
+
+  trackPdfDocument(_index: number, document: CatalogPdfDocument): string {
+    return document.id;
+  }
+
   private loadCatalog(): void {
     this.isLoading = true;
     this.clearFeedback();
@@ -247,6 +364,7 @@ export class PriceAdminComponent implements OnInit {
       next: (products: Product[]) => {
         this.setProducts(products);
         this.isLoading = false;
+        void this.loadSelectedCatalogPdf();
       },
       error: () => {
         this.products = [];
@@ -255,6 +373,20 @@ export class PriceAdminComponent implements OnInit {
         this.showFeedback('No se pudo cargar el catalogo seleccionado.', 'error');
       }
     });
+  }
+
+  private async loadSelectedCatalogPdf(): Promise<void> {
+    this.catalogPdfDocuments = [];
+    this.selectedCatalogPdfId = '';
+
+    try {
+      const references = await this.supabase.getCatalogPdfReferences(this.selectedCatalogId);
+      this.catalogPdfDocuments = references;
+      this.selectedCatalogPdfId = this.catalogPdfDocuments[0]?.id ?? '';
+    } catch {
+      this.catalogPdfDocuments = [];
+      this.selectedCatalogPdfId = '';
+    }
   }
 
   private async initializeAccess(): Promise<void> {
@@ -274,7 +406,9 @@ export class PriceAdminComponent implements OnInit {
         return;
       }
 
-      const isAdmin = await this.supabase.isCurrentUserAdmin(userId);
+      const isAdminByRole = await this.supabase.isCurrentUserAdmin(userId);
+      const isAdmin = isAdminByRole || await this.supabase.ensureCurrentUserAdmin();
+
       if (!isAdmin) {
         this.accessState = 'unauthorized';
         this.showAuthMessage('La cuenta esta autenticada, pero no tiene permisos de administrador.', 'error');
@@ -369,5 +503,13 @@ export class PriceAdminComponent implements OnInit {
     }
 
     return 'Supabase rechazo el guardado. Verifica tu sesion e intenta nuevamente.';
+  }
+
+  private getPdfUploadErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return 'No se pudo cargar el PDF. Verifica la conexion a Supabase y que el bucket de almacenamiento exista.';
   }
 }

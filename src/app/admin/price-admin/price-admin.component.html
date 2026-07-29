@@ -27,14 +27,19 @@
         </label>
         <label>
           <span>Contrasena</span>
-          <input
-            type="password"
-            [attr.autocomplete]="authMode === 'sign-in' ? 'current-password' : 'new-password'"
-            [(ngModel)]="authPassword"
-            name="password"
-            minlength="6"
-            required
-          >
+          <div class="password-field">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              [attr.autocomplete]="authMode === 'sign-in' ? 'current-password' : 'new-password'"
+              [(ngModel)]="authPassword"
+              name="password"
+              minlength="6"
+              required
+            >
+            <button type="button" class="password-toggle" (click)="togglePasswordVisibility()" [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <i class="fas" [class.fa-eye]="!showPassword" [class.fa-eye-slash]="showPassword" aria-hidden="true"></i>
+            </button>
+          </div>
         </label>
         <button type="submit" class="auth-submit" [disabled]="isAuthSubmitting">
           <i class="fas" [class.fa-sign-in-alt]="!isAuthSubmitting" [class.fa-circle-notch]="isAuthSubmitting" [class.fa-spin]="isAuthSubmitting" aria-hidden="true"></i>
@@ -142,6 +147,77 @@
         <i class="fas" [class.fa-check-circle]="feedbackTone === 'success'" [class.fa-exclamation-circle]="feedbackTone === 'error'" aria-hidden="true"></i>
         {{ feedbackMessage }}
       </div>
+
+      <section class="pdf-card" aria-label="Documento PDF del catalogo">
+        <div class="pdf-card-header">
+          <div>
+            <span class="section-kicker">Documento compartible</span>
+            <h3>PDF del catalogo</h3>
+          </div>
+          <label class="pdf-upload-button" [class.disabled]="isUploadingPdf">
+            <i class="fas" [class.fa-upload]="!isUploadingPdf" [class.fa-circle-notch]="isUploadingPdf" [class.fa-spin]="isUploadingPdf" aria-hidden="true"></i>
+            {{ isUploadingPdf ? 'Subiendo...' : 'Cargar PDF' }}
+            <input type="file" accept="application/pdf" (change)="onPdfSelected($event)" />
+          </label>
+        </div>
+
+        <p class="pdf-card-copy">
+          Puedes cargar varios PDFs por catalogo. Recomendado: al menos 3 archivos para tener versiones, promos o listas separadas.
+        </p>
+
+        <div class="pdf-link-input-row">
+          <input
+            type="url"
+            class="pdf-link-input"
+            [(ngModel)]="pdfLinkDraft"
+            name="pdfLinkDraft"
+            placeholder="https://.../catalogo.pdf"
+          >
+          <button type="button" class="pdf-copy-button" (click)="saveCatalogPdfLink()" [disabled]="isUploadingPdf">
+            <i class="fas fa-link" aria-hidden="true"></i>
+            Guardar enlace
+          </button>
+        </div>
+
+        <div class="pdf-counter" *ngIf="catalogPdfDocuments.length > 0">
+          <strong>{{ catalogPdfDocuments.length }}</strong>
+          <span>{{ catalogPdfDocuments.length === 1 ? 'PDF cargado' : 'PDFs cargados' }}</span>
+          <button
+            type="button"
+            class="pdf-delete-button"
+            (click)="deleteSelectedPdf()"
+            [disabled]="!selectedCatalogPdfId || isDeletingPdf || isUploadingPdf"
+          >
+            <i class="fas" [class.fa-trash-alt]="!isDeletingPdf" [class.fa-circle-notch]="isDeletingPdf" [class.fa-spin]="isDeletingPdf" aria-hidden="true"></i>
+            {{ isDeletingPdf ? 'Eliminando...' : 'Eliminar seleccionado' }}
+          </button>
+        </div>
+
+        <div class="pdf-link-list" *ngIf="catalogPdfDocuments.length > 0">
+          <div class="pdf-link-row" *ngFor="let pdf of catalogPdfDocuments; trackBy: trackPdfDocument" [class.selected]="pdf.id === selectedCatalogPdfId">
+            <label class="pdf-select-control" [attr.for]="'pdf-' + pdf.id">
+              <input
+                [id]="'pdf-' + pdf.id"
+                type="radio"
+                name="selectedCatalogPdf"
+                [checked]="pdf.id === selectedCatalogPdfId"
+                (change)="selectPdfDocument(pdf.id)"
+              >
+              Seleccionar
+            </label>
+            <a [href]="pdf.url" target="_blank" rel="noreferrer">{{ pdf.fileName || 'Abrir PDF' }}</a>
+            <button type="button" class="pdf-copy-button" (click)="copyCatalogPdfLink(pdf.url)">
+              <i class="fas fa-copy" aria-hidden="true"></i>
+              Copiar enlace
+            </button>
+          </div>
+        </div>
+
+        <div class="pdf-empty-state" *ngIf="catalogPdfDocuments.length === 0">
+          <i class="fas fa-file-pdf" aria-hidden="true"></i>
+          <span>Aun no hay PDFs cargados para este catalogo.</span>
+        </div>
+      </section>
 
       <section class="price-table" aria-label="Edicion de precios">
         <div class="table-head">

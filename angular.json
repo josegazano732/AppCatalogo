@@ -31,6 +31,8 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "/AppCatalogo/",
+              "deployUrl": "/AppCatalogo/",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

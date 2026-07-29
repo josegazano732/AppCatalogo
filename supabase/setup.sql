@@ -52,6 +52,15 @@ create table if not exists public.price_history (
   changed_at timestamptz not null default now()
 );
 
+create table if not exists public.catalog_documents (
+  catalog_id text primary key references public.catalogs(id) on update cascade on delete cascade,
+  file_name text not null,
+  file_path text,
+  public_url text not null,
+  mime_type text not null default 'application/pdf',
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists catalog_prices_catalog_order_idx
   on public.catalog_prices (catalog_id, sort_order, product_id)
   where is_active;
@@ -137,6 +146,7 @@ alter table public.products enable row level security;
 alter table public.catalog_prices enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.price_history enable row level security;
+alter table public.catalog_documents enable row level security;
 
 drop policy if exists "Public can read active catalogs" on public.catalogs;
 create policy "Public can read active catalogs"
@@ -189,10 +199,25 @@ on public.price_history for select
 to authenticated
 using (public.is_catalog_admin());
 
+drop policy if exists "Public can read catalog documents" on public.catalog_documents;
+create policy "Public can read catalog documents"
+on public.catalog_documents for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins manage catalog documents" on public.catalog_documents;
+create policy "Admins manage catalog documents"
+on public.catalog_documents for all
+to authenticated
+using (public.is_catalog_admin())
+with check (public.is_catalog_admin());
+
 grant usage on schema public to anon, authenticated;
 grant select on public.catalogs, public.products, public.catalog_prices to anon, authenticated;
 grant select, insert, update, delete on public.catalogs, public.products, public.catalog_prices to authenticated;
 grant select on public.admin_users, public.price_history to authenticated;
+grant select on public.catalog_documents to anon, authenticated;
+grant select, insert, update, delete on public.catalog_documents to authenticated;
 grant usage, select on sequence public.price_history_id_seq to authenticated;
 
 insert into public.catalogs (id, name, description, route, price_label)
