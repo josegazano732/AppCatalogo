@@ -48,7 +48,7 @@ export class ProductService {
       id: 'whatsapp',
       name: 'Catalogo WhatsApp',
       description: 'Lista principal de packs para pedidos por WhatsApp.',
-      route: '/',
+      route: '/catalogo-whatsapp',
       priceLabel: 'Precio por pack'
     },
     {

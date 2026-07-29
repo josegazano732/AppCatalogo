@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { PriceAdminComponent } from './admin/price-admin/price-admin.component';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { CatalogHubComponent } from './home/catalog-hub.component';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { HolowatyCatalogComponent } from './products/holowaty-catalog/holowaty-catalog.component';
@@ -15,6 +16,7 @@ import { WholesaleCatalogComponent } from './products/wholesale-catalog/wholesal
 @NgModule({
   declarations: [
     AppComponent,
+    CatalogHubComponent,
     PriceAdminComponent,
     WhatsappCatalogComponent,
     DistributorPalletCatalogComponent,

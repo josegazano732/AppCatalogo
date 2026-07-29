@@ -1,0 +1,68 @@
+<main class="hub-shell">
+  <header class="hub-topbar">
+    <div class="hub-brand">
+      <img src="assets/branding/amate-logo.jpg" alt="AMATE">
+      <div>
+        <p class="hub-kicker">Panel de catalogos</p>
+        <h1>Centro de Catalogos</h1>
+      </div>
+    </div>
+    <a class="hub-admin-link" routerLink="/administracion/precios">
+      <i class="fas fa-sliders-h" aria-hidden="true"></i>
+      Administracion
+    </a>
+  </header>
+
+  <section class="hub-hero">
+    <div class="hero-main">
+      <h2>Selecciona un catalogo y abre sus PDFs</h2>
+      <p class="hub-lead">Acceso rapido a los catalogos principales y sus documentos compartidos.</p>
+    </div>
+    <div class="hero-stat">
+      <span>Catalogos activos</span>
+      <strong>{{ cards.length }}</strong>
+    </div>
+  </section>
+
+  <section class="hub-grid" aria-label="Catalogos disponibles">
+    <article class="hub-card" *ngFor="let card of cards">
+      <header class="hub-card-head">
+        <p class="hub-card-subtitle">{{ card.subtitle }}</p>
+        <h2>{{ card.title }}</h2>
+        <p>{{ card.description }}</p>
+      </header>
+
+      <div class="hub-card-actions">
+        <a class="open-catalog-btn" [routerLink]="card.route">
+          <i class="fas fa-store" aria-hidden="true"></i>
+          Abrir catalogo
+        </a>
+      </div>
+
+      <div class="hub-pdf-block">
+        <div class="hub-pdf-head">
+          <strong>PDFs del catalogo</strong>
+          <span *ngIf="!isLoading">{{ getPdfList(card.id).length }}</span>
+        </div>
+
+        <p class="hub-pdf-loading" *ngIf="isLoading">
+          <i class="fas fa-circle-notch fa-spin" aria-hidden="true"></i>
+          Cargando PDFs...
+        </p>
+
+        <ul class="hub-pdf-list" *ngIf="!isLoading && getPdfList(card.id).length > 0">
+          <li *ngFor="let pdf of getPdfList(card.id)">
+            <a [href]="pdf.url" target="_blank" rel="noreferrer">
+              <i class="fas fa-file-pdf" aria-hidden="true"></i>
+              {{ pdf.fileName }}
+            </a>
+          </li>
+        </ul>
+
+        <p class="hub-pdf-empty" *ngIf="!isLoading && getPdfList(card.id).length === 0">
+          No hay PDFs cargados para este catalogo.
+        </p>
+      </div>
+    </article>
+  </section>
+</main>

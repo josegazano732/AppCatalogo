@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 import { PriceAdminComponent } from './admin/price-admin/price-admin.component';
+import { CatalogHubComponent } from './home/catalog-hub.component';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { HolowatyCatalogComponent } from './products/holowaty-catalog/holowaty-catalog.component';
@@ -16,6 +17,10 @@ const routes: Routes = [
   },
   {
     path: '',
+    component: CatalogHubComponent
+  },
+  {
+    path: 'catalogo-whatsapp',
     component: WhatsappCatalogComponent
   },
   {
@@ -42,11 +47,6 @@ const routes: Routes = [
   {
     path: 'holowaty',
     component: HolowatyCatalogComponent
-  },
-  {
-    path: 'catalogo-whatsapp',
-    redirectTo: '',
-    pathMatch: 'full'
   },
   {
     path: '**',
