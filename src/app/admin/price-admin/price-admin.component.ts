@@ -7,9 +7,22 @@ import {
   ProductPriceUpdate,
   ProductService
 } from '../../services/product.service';
-import { CatalogPdfDocument, SupabaseService } from '../../services/supabase.service';
+import { CatalogPdfDocument, CatalogProductUpsert, SupabaseService } from '../../services/supabase.service';
 
 type AdminAccessState = 'loading' | 'signed-out' | 'unauthorized' | 'admin';
+
+interface ProductFormState {
+  id: string;
+  name: string;
+  description: string;
+  categoryName: string;
+  unitOfMeasure: string;
+  sku: string;
+  brand: string;
+  stock: string;
+  price: string;
+  imageUrl: string;
+}
 
 @Component({
   selector: 'app-price-admin',
@@ -30,6 +43,8 @@ export class PriceAdminComponent implements OnInit {
   percentageDraft = '';
   isLoading = false;
   isSaving = false;
+  isSavingProduct = false;
+  isDeletingProduct = false;
   isUploadingPdf = false;
   isDeletingPdf = false;
   feedbackMessage = '';
@@ -45,6 +60,11 @@ export class PriceAdminComponent implements OnInit {
   catalogPdfDocuments: CatalogPdfDocument[] = [];
   selectedCatalogPdfId = '';
   pdfLinkDraft = '';
+  editingProductId: string | null = null;
+  deletingProductId: string | null = null;
+  selectedProductImageFile: File | null = null;
+  selectedProductImageName = '';
+  productForm: ProductFormState = this.createEmptyProductForm();
 
   private originalPrices: Record<string, number> = {};
 
@@ -69,6 +89,10 @@ export class PriceAdminComponent implements OnInit {
 
   get changedProductsCount(): number {
     return this.products.filter((product: Product) => this.isProductChanged(product)).length;
+  }
+
+  get isEditingProduct(): boolean {
+    return Boolean(this.editingProductId);
   }
 
   async submitAuth(): Promise<void> {
@@ -135,6 +159,7 @@ export class PriceAdminComponent implements OnInit {
     this.searchTerm = '';
     this.selectedCategory = '';
     this.percentageDraft = '';
+    this.cancelProductForm();
     this.loadCatalog();
   }
 
@@ -248,6 +273,162 @@ export class PriceAdminComponent implements OnInit {
 
   trackProduct(_index: number, product: Product): string {
     return product.id;
+  }
+
+  editProduct(product: Product): void {
+    this.editingProductId = product.id;
+    this.productForm = {
+      id: product.id,
+      name: product.name,
+      description: product.description ?? '',
+      categoryName: product.category_name || product.category || '',
+      unitOfMeasure: product.unit_of_measure ?? '',
+      sku: product.sku ?? '',
+      brand: product.brand ?? '',
+      stock: String(product.stock ?? 0),
+      price: this.formatEditablePrice(this.getProductPrice(product)),
+      imageUrl: product.image ?? ''
+    };
+    this.selectedProductImageFile = null;
+    this.selectedProductImageName = '';
+    this.clearFeedback();
+  }
+
+  createNewProduct(): void {
+    this.cancelProductForm();
+  }
+
+  cancelProductForm(): void {
+    this.editingProductId = null;
+    this.productForm = this.createEmptyProductForm();
+    this.selectedProductImageFile = null;
+    this.selectedProductImageName = '';
+  }
+
+  onProductImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (!file) {
+      this.selectedProductImageFile = null;
+      this.selectedProductImageName = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.showFeedback('Selecciona un archivo de imagen valido.', 'error');
+      input.value = '';
+      this.selectedProductImageFile = null;
+      this.selectedProductImageName = '';
+      return;
+    }
+
+    this.selectedProductImageFile = file;
+    this.selectedProductImageName = file.name;
+    this.clearFeedback();
+  }
+
+  async saveProductForm(): Promise<void> {
+    if (this.isSavingProduct) {
+      return;
+    }
+
+    const name = this.productForm.name.trim();
+    const description = this.productForm.description.trim();
+    const categoryName = this.productForm.categoryName.trim();
+    const stock = this.parseDecimal(this.productForm.stock);
+    const price = this.parseDecimal(this.productForm.price);
+
+    if (!name) {
+      this.showFeedback('Ingresa el nombre del producto.', 'error');
+      return;
+    }
+
+    if (stock === null || stock < 0) {
+      this.showFeedback('El stock debe ser un numero mayor o igual a cero.', 'error');
+      return;
+    }
+
+    if (price === null || price <= 0) {
+      this.showFeedback('El precio del producto debe ser mayor que cero.', 'error');
+      return;
+    }
+
+    this.isSavingProduct = true;
+    this.clearFeedback();
+
+    try {
+      const schemaAvailable = await this.supabase.isSchemaAvailable();
+      if (!schemaAvailable) {
+        this.showFeedback('No se detecto el esquema administrativo de Supabase para guardar productos.', 'error');
+        return;
+      }
+
+      const productId = this.editingProductId ?? this.createProductId(name);
+      let imageUrl = this.productForm.imageUrl.trim();
+
+      if (this.selectedProductImageFile) {
+        const webpBlob = await this.convertImageToWebp(this.selectedProductImageFile);
+        imageUrl = await this.supabase.uploadProductImage(this.selectedCatalogId, productId, webpBlob);
+      }
+
+      const payload: CatalogProductUpsert = {
+        id: productId,
+        name,
+        description,
+        categoryName,
+        unitOfMeasure: this.productForm.unitOfMeasure.trim(),
+        sku: this.productForm.sku.trim(),
+        brand: this.productForm.brand.trim(),
+        stock: Number(stock.toFixed(2)),
+        price: Number(price.toFixed(2)),
+        image: imageUrl || undefined
+      };
+
+      if (this.editingProductId) {
+        await this.supabase.updateCatalogProduct(this.selectedCatalogId, payload);
+        this.showFeedback('Producto actualizado correctamente.', 'success');
+      } else {
+        await this.supabase.createCatalogProduct(this.selectedCatalogId, payload);
+        this.showFeedback('Producto creado correctamente.', 'success');
+      }
+
+      this.cancelProductForm();
+      this.loadCatalog();
+    } catch (error: unknown) {
+      this.showFeedback(this.getProductErrorMessage(error), 'error');
+    } finally {
+      this.isSavingProduct = false;
+    }
+  }
+
+  async deleteProduct(product: Product): Promise<void> {
+    if (this.isDeletingProduct) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(`¿Eliminar "${product.name}" del catalogo actual?`);
+    if (!shouldDelete) {
+      return;
+    }
+
+    this.isDeletingProduct = true;
+    this.deletingProductId = product.id;
+    this.clearFeedback();
+
+    try {
+      await this.supabase.deleteCatalogProduct(this.selectedCatalogId, product.id);
+      if (this.editingProductId === product.id) {
+        this.cancelProductForm();
+      }
+      this.showFeedback('Producto eliminado del catalogo.', 'success');
+      this.loadCatalog();
+    } catch (error: unknown) {
+      this.showFeedback(this.getProductErrorMessage(error), 'error');
+    } finally {
+      this.isDeletingProduct = false;
+      this.deletingProductId = null;
+    }
   }
 
   async onPdfSelected(event: Event): Promise<void> {
@@ -437,6 +618,10 @@ export class PriceAdminComponent implements OnInit {
 
     this.categories = [...new Set(products.map((product: Product) => this.getCategoryLabel(product)))].sort((a, b) => a.localeCompare(b, 'es'));
     this.applyFilters();
+
+    if (this.editingProductId && !products.some((product: Product) => product.id === this.editingProductId)) {
+      this.cancelProductForm();
+    }
   }
 
   private getProductPrice(product: Product): number {
@@ -505,11 +690,97 @@ export class PriceAdminComponent implements OnInit {
     return 'Supabase rechazo el guardado. Verifica tu sesion e intenta nuevamente.';
   }
 
+  private getProductErrorMessage(error: unknown): string {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+
+    if (message.includes('duplicate key') || message.includes('already exists')) {
+      return 'El ID generado ya existe. Reintenta crear el producto.';
+    }
+
+    if (message.includes('product-images') || message.includes('storage')) {
+      return 'No se pudo cargar la imagen. Revisa el bucket product-images y sus politicas.';
+    }
+
+    if (message.includes('sesion administrativa')) {
+      return 'La sesion administrativa vencio. Vuelve a iniciar sesion.';
+    }
+
+    return 'No se pudo guardar el producto en Supabase.';
+  }
+
   private getPdfUploadErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message) {
       return error.message;
     }
 
     return 'No se pudo cargar el PDF. Verifica la conexion a Supabase y que el bucket de almacenamiento exista.';
+  }
+
+  private createEmptyProductForm(): ProductFormState {
+    return {
+      id: '',
+      name: '',
+      description: '',
+      categoryName: '',
+      unitOfMeasure: 'unidad',
+      sku: '',
+      brand: '',
+      stock: '0',
+      price: '',
+      imageUrl: ''
+    };
+  }
+
+  private createProductId(name: string): string {
+    const slug = this.normalizeText(name).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return `${this.selectedCatalogId}-${slug || 'producto'}-${Date.now()}`;
+  }
+
+  private async convertImageToWebp(file: File): Promise<Blob> {
+    const image = await this.loadImageFromFile(file);
+    const maxSize = 1400;
+    const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+    const targetWidth = Math.max(1, Math.round(image.width * scale));
+    const targetHeight = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Tu navegador no permite procesar imagenes en este momento.');
+    }
+
+    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((generatedBlob: Blob | null) => resolve(generatedBlob), 'image/webp', 0.82);
+    });
+
+    if (!blob) {
+      throw new Error('No se pudo convertir la imagen a formato WEBP.');
+    }
+
+    return blob;
+  }
+
+  private loadImageFromFile(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('El archivo de imagen no pudo abrirse.'));
+      };
+
+      image.src = objectUrl;
+    });
   }
 }

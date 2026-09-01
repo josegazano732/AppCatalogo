@@ -551,6 +551,17 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
   }
 
   private getProductSortRank(product: Product): number {
+    const normalizedName = this.normalizeText(product.name);
+    const firstDonJulianIndex = this.productDisplayOrder.findIndex((name: string) => this.normalizeText(name).includes('don julian'));
+
+    if (normalizedName.includes('don julian') && normalizedName.includes('despalada')) {
+      return firstDonJulianIndex >= 0 ? firstDonJulianIndex : 0;
+    }
+
+    if (normalizedName.includes('don julian')) {
+      return firstDonJulianIndex >= 0 ? firstDonJulianIndex + 1 : 1;
+    }
+
     const index = this.productDisplayOrder.indexOf(product.name);
     return index >= 0 ? index : this.productDisplayOrder.length;
   }

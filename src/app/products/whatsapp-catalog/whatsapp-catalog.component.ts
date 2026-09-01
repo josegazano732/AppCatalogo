@@ -164,6 +164,11 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
           .filter((product: Product) => (product.wholesale_price ?? 0) > 0)
           .filter((product: Product) => enabledCategories.has(this.normalizeText(this.getCategoryLabel(product))))
           .sort((a: Product, b: Product) => {
+            const priorityDiff = this.getDonJulianPriority(a) - this.getDonJulianPriority(b);
+            if (priorityDiff !== 0) {
+              return priorityDiff;
+            }
+
             const categoryDiff = this.getCategoryLabel(a).localeCompare(this.getCategoryLabel(b), 'es');
             if (categoryDiff !== 0) {
               return categoryDiff;
@@ -546,6 +551,20 @@ export class WhatsappCatalogComponent implements OnInit, OnDestroy {
     }
 
     return 1;
+  }
+
+  private getDonJulianPriority(product: Product): number {
+    const normalizedName = this.normalizeText(product.name);
+
+    if (normalizedName.includes('don julian') && normalizedName.includes('despalada')) {
+      return 0;
+    }
+
+    if (normalizedName.includes('don julian')) {
+      return 1;
+    }
+
+    return 2;
   }
 
   private refreshMixPackOneAvailability(): void {

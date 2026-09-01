@@ -148,6 +148,82 @@
         {{ feedbackMessage }}
       </div>
 
+      <section class="product-form-card" aria-label="ABM de productos">
+        <div class="product-form-header">
+          <div>
+            <span class="section-kicker">Gestion de productos</span>
+            <h3>{{ isEditingProduct ? 'Editar producto' : 'Alta de producto' }}</h3>
+          </div>
+          <button type="button" class="new-product-button" (click)="createNewProduct()" [disabled]="isSavingProduct || isDeletingProduct">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            Nuevo
+          </button>
+        </div>
+
+        <div class="product-form-grid">
+          <label>
+            <span>Nombre</span>
+            <input type="text" [(ngModel)]="productForm.name" name="productName" placeholder="Ej: Yerba Mate 500g" />
+          </label>
+
+          <label>
+            <span>Categoria</span>
+            <input type="text" [(ngModel)]="productForm.categoryName" name="productCategory" placeholder="Ej: Yerba Mate" />
+          </label>
+
+          <label>
+            <span>SKU</span>
+            <input type="text" [(ngModel)]="productForm.sku" name="productSku" placeholder="Opcional" />
+          </label>
+
+          <label>
+            <span>Marca</span>
+            <input type="text" [(ngModel)]="productForm.brand" name="productBrand" placeholder="Opcional" />
+          </label>
+
+          <label>
+            <span>Unidad</span>
+            <input type="text" [(ngModel)]="productForm.unitOfMeasure" name="productUnit" placeholder="pack / unidad" />
+          </label>
+
+          <label>
+            <span>Stock</span>
+            <input type="text" inputmode="decimal" [(ngModel)]="productForm.stock" name="productStock" placeholder="0" />
+          </label>
+
+          <label>
+            <span>Precio del catalogo</span>
+            <input type="text" inputmode="decimal" [(ngModel)]="productForm.price" name="productPrice" placeholder="Ej: 12500" />
+          </label>
+
+          <label class="image-url-field">
+            <span>URL de imagen (opcional)</span>
+            <input type="url" [(ngModel)]="productForm.imageUrl" name="productImageUrl" placeholder="https://..." />
+          </label>
+
+          <label class="description-field">
+            <span>Descripcion</span>
+            <textarea rows="3" [(ngModel)]="productForm.description" name="productDescription" placeholder="Descripcion comercial del producto"></textarea>
+          </label>
+
+          <label class="product-image-picker" [class.disabled]="isSavingProduct">
+            <span>Foto del producto (se convierte a WEBP)</span>
+            <input type="file" accept="image/*" (change)="onProductImageSelected($event)" [disabled]="isSavingProduct" />
+            <small *ngIf="selectedProductImageName">Seleccionada: {{ selectedProductImageName }}</small>
+          </label>
+        </div>
+
+        <div class="product-form-actions">
+          <button type="button" class="discard-button" (click)="cancelProductForm()" [disabled]="isSavingProduct || isDeletingProduct">
+            Limpiar
+          </button>
+          <button type="button" class="save-button" (click)="saveProductForm()" [disabled]="isSavingProduct || isDeletingProduct">
+            <i class="fas" [class.fa-save]="!isSavingProduct" [class.fa-circle-notch]="isSavingProduct" [class.fa-spin]="isSavingProduct" aria-hidden="true"></i>
+            {{ isSavingProduct ? 'Guardando...' : (isEditingProduct ? 'Actualizar producto' : 'Crear producto') }}
+          </button>
+        </div>
+      </section>
+
       <section class="pdf-card" aria-label="Documento PDF del catalogo">
         <div class="pdf-card-header">
           <div>
@@ -225,6 +301,7 @@
           <span>Precio actual</span>
           <span>Nuevo precio</span>
           <span>Estado</span>
+          <span>Acciones</span>
         </div>
 
         <div class="loading-state" *ngIf="isLoading">
@@ -263,6 +340,16 @@
           <div class="row-status">
             <span *ngIf="isProductChanged(product)" class="status-edited"><i class="fas fa-pen" aria-hidden="true"></i> Editado</span>
             <span *ngIf="!isProductChanged(product)" class="status-current"><i class="fas fa-check" aria-hidden="true"></i> Actual</span>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="row-action-edit" (click)="editProduct(product)" [disabled]="isSavingProduct || isDeletingProduct">
+              <i class="fas fa-pen" aria-hidden="true"></i>
+              Editar
+            </button>
+            <button type="button" class="row-action-delete" (click)="deleteProduct(product)" [disabled]="isSavingProduct || isDeletingProduct">
+              <i class="fas" [class.fa-trash-alt]="deletingProductId !== product.id" [class.fa-circle-notch]="deletingProductId === product.id" [class.fa-spin]="deletingProductId === product.id" aria-hidden="true"></i>
+              Eliminar
+            </button>
           </div>
         </article>
 

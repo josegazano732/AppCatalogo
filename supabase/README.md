@@ -80,6 +80,35 @@ Si ya tenias una version anterior que guardaba un solo PDF por catalogo, ejecuta
 
 Si aun no lo hiciste, agrega el usuario a `public.admin_users`.
 
+## Configurar Storage para imagenes de productos
+
+Para que el panel administrativo pueda guardar fotos de productos en formato WEBP:
+
+### 1) Crear el bucket
+
+En Supabase Dashboard > Storage, crea un bucket llamado:
+
+```text
+product-images
+```
+
+Marca el bucket como publico.
+
+### 2) Crear politicas de Storage
+
+Puedes hacerlo manualmente en SQL Editor o ejecutar la migracion:
+
+- `supabase/migrations/202609010001_product_images_storage.sql`
+
+La migracion crea el bucket (si no existe) y agrega politicas para:
+
+- lectura publica de imagenes
+- insercion, actualizacion y borrado para usuarios autenticados
+
+### 3) Flujo en pantalla
+
+En `#/administracion/precios`, al seleccionar una foto de producto, la app la convierte automaticamente a `image/webp` antes de subirla a Storage.
+
 ## Regenerar los datos iniciales
 
 Cuando cambien los productos definidos en la aplicacion:

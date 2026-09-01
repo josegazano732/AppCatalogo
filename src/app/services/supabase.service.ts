@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { environment } from '../../environments/environment';
+import { Product } from '../models/product.model';
 
 export interface RemotePriceUpdate {
   productId: string;
@@ -23,12 +24,47 @@ export interface CatalogPdfDocument {
   updatedAt: string;
 }
 
+export interface CatalogProductUpsert {
+  id: string;
+  name: string;
+  description: string;
+  categoryName?: string;
+  image?: string;
+  unitOfMeasure?: string;
+  sku?: string;
+  brand?: string;
+  stock: number;
+  price: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class SupabaseService {
   private clientPromise?: Promise<SupabaseClient>;
   private readonly pdfReferenceStorageKey = 'app-catalogo-pdf-references-v1';
+  private readonly productImagesBucket = 'product-images';
+
+  async getCatalogProducts(catalogId: string): Promise<Product[]> {
+    const client = await this.getClient();
+    const { data, error } = await client
+      .from('catalog_prices')
+      .select('product_id, price, sort_order, products(id, name, description, category_name, image, unit_of_measure, sku, brand, stock, metadata)')
+      .eq('catalog_id', catalogId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .order('product_id', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+
+    return rows
+      .map((row: any) => this.mapCatalogProductRow(row, catalogId))
+      .filter((product: Product | null): product is Product => product !== null);
+  }
 
   async getCatalogPrices(catalogId: string): Promise<Record<string, number>> {
     const client = await this.getClient();
@@ -69,6 +105,90 @@ export class SupabaseService {
     if (error) {
       throw error;
     }
+  }
+
+  async createCatalogProduct(catalogId: string, product: CatalogProductUpsert): Promise<void> {
+    await this.upsertCatalogProduct(catalogId, product, false);
+  }
+
+  async updateCatalogProduct(catalogId: string, product: CatalogProductUpsert): Promise<void> {
+    await this.upsertCatalogProduct(catalogId, product, true);
+  }
+
+  async deleteCatalogProduct(catalogId: string, productId: string): Promise<void> {
+    const client = await this.getClient();
+    const { data: sessionData } = await client.auth.getSession();
+
+    if (!sessionData.session) {
+      throw new Error('Se requiere una sesion administrativa para eliminar productos.');
+    }
+
+    const { error: deletePriceError } = await client
+      .from('catalog_prices')
+      .delete()
+      .eq('catalog_id', catalogId)
+      .eq('product_id', productId);
+
+    if (deletePriceError) {
+      throw deletePriceError;
+    }
+
+    const { count, error: countError } = await client
+      .from('catalog_prices')
+      .select('product_id', { count: 'exact', head: true })
+      .eq('product_id', productId)
+      .eq('is_active', true);
+
+    if (countError) {
+      throw countError;
+    }
+
+    if ((count ?? 0) === 0) {
+      const { error: deleteProductError } = await client
+        .from('products')
+        .delete()
+        .eq('id', productId);
+
+      if (deleteProductError) {
+        throw deleteProductError;
+      }
+    }
+  }
+
+  async uploadProductImage(catalogId: string, productId: string, imageBlob: Blob): Promise<string> {
+    const client = await this.getClient();
+    const { data: sessionData } = await client.auth.getSession();
+
+    if (!sessionData.session) {
+      throw new Error('Se requiere una sesion administrativa para subir imagenes.');
+    }
+
+    const fileName = `${Date.now()}.webp`;
+    const storagePath = `catalogs/${catalogId}/${productId}/${fileName}`;
+    const { error: uploadError } = await client.storage
+      .from(this.productImagesBucket)
+      .upload(storagePath, imageBlob, {
+        upsert: true,
+        contentType: 'image/webp'
+      });
+
+    if (uploadError) {
+      const detail = [uploadError.message, uploadError.name]
+        .filter((value: string | undefined) => Boolean(value && value.trim()))
+        .join(' - ');
+      throw new Error(`No se pudo subir la imagen WEBP. Verifica el bucket product-images y sus politicas de acceso. ${detail ? `Detalle: ${detail}` : ''}`.trim());
+    }
+
+    const { data: publicUrlData } = client.storage
+      .from(this.productImagesBucket)
+      .getPublicUrl(storagePath);
+
+    const publicUrl = publicUrlData.publicUrl?.trim();
+    if (!publicUrl) {
+      throw new Error('No se pudo obtener una URL publica para la imagen subida.');
+    }
+
+    return publicUrl;
   }
 
   async signIn(email: string, password: string): Promise<void> {
@@ -450,6 +570,116 @@ export class SupabaseService {
   private sanitizeFileName(fileName: string): string {
     const safeName = fileName.trim().replace(/[^a-zA-Z0-9._-]+/g, '-');
     return safeName || 'catalogo.pdf';
+  }
+
+  private mapCatalogProductRow(row: any, catalogId: string): Product | null {
+    const product = row?.products;
+    if (!product || !product.id || !product.name) {
+      return null;
+    }
+
+    const metadata = typeof product.metadata === 'object' && product.metadata !== null ? product.metadata : {};
+    const price = Number(row?.price ?? 0);
+
+    const mapped: Product = {
+      id: String(product.id),
+      name: String(product.name),
+      description: String(product.description ?? ''),
+      stock: Number(product.stock ?? 0),
+      price,
+      wholesale_price: price,
+      category_name: product.category_name ? String(product.category_name) : undefined,
+      image: product.image ? String(product.image) : undefined,
+      unit_of_measure: product.unit_of_measure ? String(product.unit_of_measure) : undefined,
+      sku: product.sku ? String(product.sku) : undefined,
+      brand: product.brand ? String(product.brand) : undefined,
+      pallet_units: this.parseOptionalNumber(metadata['pallet_units']),
+      price_per_kilo: this.parseOptionalNumber(metadata['price_per_kilo']),
+      unit_net_price: this.parseOptionalNumber(metadata['unit_net_price']),
+      net_price: this.parseOptionalNumber(metadata['net_price']),
+      tax_rate: this.parseOptionalNumber(metadata['tax_rate'])
+    };
+
+    if (catalogId === 'holowaty') {
+      mapped.list_price = price;
+    }
+
+    return mapped;
+  }
+
+  private parseOptionalNumber(value: unknown): number | undefined {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  private async upsertCatalogProduct(catalogId: string, product: CatalogProductUpsert, isUpdate: boolean): Promise<void> {
+    const client = await this.getClient();
+    const { data: sessionData } = await client.auth.getSession();
+
+    if (!sessionData.session) {
+      throw new Error('Se requiere una sesion administrativa para guardar productos.');
+    }
+
+    let metadata: Record<string, unknown> = {};
+
+    if (isUpdate) {
+      const { data: existingProduct } = await client
+        .from('products')
+        .select('metadata')
+        .eq('id', product.id)
+        .maybeSingle();
+
+      if (existingProduct && typeof existingProduct['metadata'] === 'object' && existingProduct['metadata'] !== null) {
+        metadata = { ...(existingProduct['metadata'] as Record<string, unknown>) };
+      }
+    }
+
+    const productRow = {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      category_name: product.categoryName ?? null,
+      image: product.image ?? null,
+      unit_of_measure: product.unitOfMeasure ?? null,
+      sku: product.sku ?? null,
+      brand: product.brand ?? null,
+      stock: product.stock,
+      metadata
+    };
+
+    if (isUpdate) {
+      const { error: updateError } = await client
+        .from('products')
+        .update(productRow)
+        .eq('id', product.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+    } else {
+      const { error: insertError } = await client
+        .from('products')
+        .insert(productRow);
+
+      if (insertError) {
+        throw insertError;
+      }
+    }
+
+    const priceRow = {
+      catalog_id: catalogId,
+      product_id: product.id,
+      price: product.price,
+      is_active: true
+    };
+
+    const { error: priceError } = await client
+      .from('catalog_prices')
+      .upsert(priceRow, { onConflict: 'catalog_id,product_id' });
+
+    if (priceError) {
+      throw priceError;
+    }
   }
 
   private getClient(): Promise<SupabaseClient> {

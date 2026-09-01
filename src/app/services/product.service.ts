@@ -737,12 +737,15 @@ export class ProductService {
   saveCatalogPrices(catalogId: PriceCatalogId, updates: ProductPriceUpdate[]): Observable<Product[]> {
     return from(this.supabase.isSchemaAvailable()).pipe(
       switchMap((schemaAvailable: boolean) => {
+        const localSnapshot = this.saveLocalCatalogPrices(catalogId, updates);
+
         if (!schemaAvailable) {
-          return of(this.saveLocalCatalogPrices(catalogId, updates));
+          return of(localSnapshot);
         }
 
         return from(this.supabase.saveCatalogPrices(catalogId, updates)).pipe(
-          map(() => this.saveLocalCatalogPrices(catalogId, updates))
+          switchMap(() => this.getCatalogProducts(catalogId)),
+          catchError(() => of(localSnapshot))
         );
       })
     );
@@ -767,9 +770,18 @@ export class ProductService {
   private getCatalogProducts(catalogId: PriceCatalogId): Observable<Product[]> {
     const localProducts = this.getCatalogProductsSnapshot(catalogId);
 
-    return from(this.supabase.getCatalogPrices(catalogId)).pipe(
-      map((remotePrices: Record<string, number>) => this.applyRemotePrices(localProducts, catalogId, remotePrices)),
-      catchError(() => of(localProducts))
+    return from(this.supabase.getCatalogProducts(catalogId)).pipe(
+      map((remoteProducts: Product[]) => {
+        if (remoteProducts.length > 0) {
+          return this.applyLocalOverridesToProducts(catalogId, remoteProducts);
+        }
+
+        return localProducts;
+      }),
+      catchError(() => from(this.supabase.getCatalogPrices(catalogId)).pipe(
+        map((remotePrices: Record<string, number>) => this.applyRemotePrices(localProducts, catalogId, remotePrices)),
+        catchError(() => of(localProducts))
+      ))
     );
   }
 
@@ -858,5 +870,23 @@ export class ProductService {
       ...product,
       image_urls: product.image_urls ? [...product.image_urls] : undefined
     }));
+  }
+
+  private applyLocalOverridesToProducts(catalogId: PriceCatalogId, products: Product[]): Product[] {
+    const catalogOverrides = this.readPriceOverrides()[catalogId] ?? {};
+
+    return this.cloneProducts(products).map((product: Product) => {
+      const overriddenPrice = catalogOverrides[product.id];
+
+      if (typeof overriddenPrice !== 'number') {
+        return product;
+      }
+
+      if (catalogId === 'holowaty') {
+        return { ...product, list_price: overriddenPrice };
+      }
+
+      return { ...product, price: overriddenPrice, wholesale_price: overriddenPrice };
+    });
   }
 }
