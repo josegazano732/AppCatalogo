@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { CartItem } from '../../models/cart-item.model';
@@ -49,8 +49,13 @@ export class RetailCatalogComponent implements OnInit, OnDestroy {
   orderSubtotal = 0;
 
   showWhatsAppConfirmModal = false;
+  showImagePreview = false;
   submitAttempted = false;
   confirmError = '';
+
+  selectedImagePreviewUrl: string | null = null;
+  selectedImagePreviewAlt = '';
+  selectedImagePreviewProduct: Product | null = null;
 
   pointOfSaleOrigin = '';
   observation = '';
@@ -209,6 +214,35 @@ export class RetailCatalogComponent implements OnInit, OnDestroy {
     this.submitAttempted = false;
     this.confirmError = '';
     this.toggleModalBodyState(false);
+  }
+
+  openImagePreview(product: Product): void {
+    if (!product.image) {
+      return;
+    }
+
+    this.selectedImagePreviewUrl = product.image;
+    this.selectedImagePreviewAlt = product.name;
+    this.selectedImagePreviewProduct = product;
+    this.showImagePreview = true;
+  }
+
+  onImagePreviewError(): void {
+    this.closeImagePreview();
+  }
+
+  closeImagePreview(): void {
+    this.showImagePreview = false;
+    this.selectedImagePreviewUrl = null;
+    this.selectedImagePreviewAlt = '';
+    this.selectedImagePreviewProduct = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePressed(): void {
+    if (this.showImagePreview) {
+      this.closeImagePreview();
+    }
   }
 
   isPaymentSelected(): boolean {

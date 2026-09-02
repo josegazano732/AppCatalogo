@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { CartItem } from '../../models/cart-item.model';
@@ -19,6 +19,10 @@ interface MixPackItem {
   styleUrls: ['../whatsapp-catalog/whatsapp-catalog.component.css']
 })
 export class CommercePosCatalogComponent implements OnInit, OnDestroy {
+  private readonly pdfExpandedImageSize = 7.2;
+  private readonly pdfExpandedImageMinCellHeight = 8;
+  private readonly pdfDetailWidth = 226;
+
   private readonly productDisplayOrder: string[] = [
     'MC Mate cocido DON JULIAN x20 PACK',
     'YM DON JULIAN 10x500g PACK',
@@ -46,6 +50,7 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   errorMessage = '';
+  isGeneratingPdf = false;
 
   currentPage = 1;
   productsPerPage = 12;
@@ -56,8 +61,13 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
   orderSubtotal = 0;
 
   showWhatsAppConfirmModal = false;
+  showImagePreview = false;
   submitAttempted = false;
   confirmError = '';
+
+  selectedImagePreviewUrl: string | null = null;
+  selectedImagePreviewAlt = '';
+  selectedImagePreviewProduct: Product | null = null;
 
   customerName = '';
   customerLastName = '';
@@ -229,6 +239,134 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  async downloadCatalogPdf(): Promise<void> {
+    if (this.filteredProducts.length === 0 || this.isGeneratingPdf) {
+      return;
+    }
+
+    this.isGeneratingPdf = true;
+
+    try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const autoTable = autoTableModule.default;
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const detailMarginX = (pdf.internal.pageSize.getWidth() - this.pdfDetailWidth) / 2;
+      const products = this.filteredProducts;
+      const [logoData, productImageMap] = await Promise.all([
+        this.loadCommercePdfLogo('assets/branding/amate-logo.jpg'),
+        this.loadCommercePdfImageMap(products)
+      ]);
+      const tableBody: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [];
+
+      this.buildCommercePdfRowsByCategory(products, 'Mate Cocido').forEach((row) => tableBody.push(row));
+      this.buildCommercePdfRowsByCategory(products, 'Yerba Mate').forEach((row) => tableBody.push(row));
+
+      this.drawCommercePdfHeader(pdf, logoData);
+
+      autoTable(pdf, {
+        startY: 27,
+        theme: 'grid',
+        tableWidth: 'auto',
+        margin: {
+          left: detailMarginX,
+          right: detailMarginX
+        },
+        head: [[
+          'Descripcion',
+          'P. PACK',
+          'P. NETO',
+          'U. BRUTO',
+          'U. NETO',
+          'Categoria'
+        ]],
+        body: tableBody,
+        styles: {
+          font: 'helvetica',
+          fontSize: 5.2,
+          cellPadding: { top: 0.2, right: 0.55, bottom: 0.2, left: 0.55 },
+          lineColor: [174, 186, 149],
+          lineWidth: 0.15,
+          textColor: [46, 57, 39],
+          valign: 'middle',
+          halign: 'center'
+        },
+        headStyles: {
+          fillColor: [212, 223, 186],
+          textColor: [43, 56, 35],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        bodyStyles: {
+          fillColor: [248, 249, 243]
+        },
+        alternateRowStyles: {
+          fillColor: [239, 244, 231]
+        },
+        columnStyles: {
+          0: { cellWidth: 98, halign: 'left' },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 25, halign: 'center' },
+          5: { cellWidth: 28, halign: 'center' }
+        },
+        didParseCell: (hookData: any) => {
+          const rawRow = hookData.row.raw;
+
+          if (Array.isArray(rawRow) && rawRow.length === 1 && typeof rawRow[0] === 'object' && rawRow[0] !== null) {
+            hookData.cell.styles['fillColor'] = [226, 234, 204];
+            hookData.cell.styles['fontStyle'] = 'bold';
+            hookData.cell.styles['textColor'] = [56, 71, 44];
+          }
+
+          if (Array.isArray(rawRow) && rawRow.length > 2 && hookData.column.index === 0) {
+            hookData.cell.styles['cellPadding'] = {
+              top: 0.2,
+              right: 0.55,
+              bottom: 0.2,
+              left: 9.2
+            };
+            hookData.cell.styles['minCellHeight'] = this.pdfExpandedImageMinCellHeight;
+          }
+        },
+        didDrawCell: (hookData: any) => {
+          const rawRow = hookData.row.raw;
+
+          if (!Array.isArray(rawRow) || rawRow.length <= 2 || hookData.column.index !== 0) {
+            return;
+          }
+
+          const descriptionCell = rawRow[0];
+          const productKey = typeof descriptionCell === 'object' && descriptionCell !== null
+            ? String((descriptionCell as any).productKey ?? '')
+            : '';
+          const imageData = productImageMap[productKey];
+
+          if (!imageData) {
+            return;
+          }
+
+          const imageSize = Math.min(this.pdfExpandedImageSize, hookData.cell.height - 0.8, hookData.cell.width - 1.8);
+          const imageX = hookData.cell.x + 0.9;
+          const imageY = hookData.cell.y + (hookData.cell.height - imageSize) / 2;
+
+          try {
+            pdf.addImage(imageData, 'PNG', imageX, imageY, imageSize, imageSize);
+          } catch {
+            // Si alguna imagen falla, mantenemos la exportacion sin interrumpir el PDF.
+          }
+        }
+      });
+
+      pdf.save('catalogo-comercios-punto-de-ventas.pdf');
+    } finally {
+      this.isGeneratingPdf = false;
+    }
+  }
+
   addOrder(product: Product): void {
     const unitPrice = this.getWholesalePrice(product);
 
@@ -336,6 +474,36 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     this.submitAttempted = false;
     this.confirmError = '';
     this.toggleModalBodyState(false);
+  }
+
+  openImagePreview(product: Product): void {
+    const imageUrl = product.image;
+    if (!imageUrl) {
+      return;
+    }
+
+    this.selectedImagePreviewUrl = imageUrl;
+    this.selectedImagePreviewAlt = product.name;
+    this.selectedImagePreviewProduct = product;
+    this.showImagePreview = true;
+  }
+
+  onImagePreviewError(): void {
+    this.closeImagePreview();
+  }
+
+  closeImagePreview(): void {
+    this.showImagePreview = false;
+    this.selectedImagePreviewUrl = null;
+    this.selectedImagePreviewAlt = '';
+    this.selectedImagePreviewProduct = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapePressed(): void {
+    if (this.showImagePreview) {
+      this.closeImagePreview();
+    }
   }
 
   onDeliveryMethodChange(method: string): void {
@@ -516,6 +684,272 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
       currency: 'ARS',
       maximumFractionDigits: 0
     }).format(value);
+  }
+
+  private formatCompactPrice(value: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+
+  private getPdfSearchLabel(): string {
+    return this.searchTerm.trim() || 'Sin filtro';
+  }
+
+  private getPdfCategoryLabel(): string {
+    return this.selectedCategory || 'Todas las categorias';
+  }
+
+  private getPdfGeneratedDateLabel(): string {
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }).format(new Date());
+  }
+
+  private async loadCommercePdfImageMap(products: Product[]): Promise<Record<string, string>> {
+    const entries = await Promise.all(products.map(async (product: Product) => {
+      const imageData = await this.loadCommercePdfImageFromCandidates(this.getCommercePdfImagePaths(product));
+      return [this.getCommercePdfRowCode(product), imageData] as const;
+    }));
+
+    return entries.reduce((imageMap: Record<string, string>, [productId, imageData]) => {
+      if (imageData) {
+        imageMap[productId] = imageData;
+      }
+
+      return imageMap;
+    }, {});
+  }
+
+  private buildCommercePdfRowsByCategory(products: Product[], sourceCategoryLabel: string): Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> {
+    const categoryProducts = products
+      .filter((product: Product) => this.normalizeText(this.getCategoryLabel(product)) === this.normalizeText(sourceCategoryLabel))
+      .sort((first: Product, second: Product) => this.getProductSortRank(first) - this.getProductSortRank(second));
+
+    if (categoryProducts.length === 0) {
+      return [];
+    }
+
+    const rows: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [[{
+      content: sourceCategoryLabel,
+      colSpan: 6,
+      styles: { halign: 'left' }
+    }]];
+
+    categoryProducts.forEach((product: Product) => rows.push([
+      {
+        content: product.name,
+        productKey: this.getCommercePdfRowCode(product)
+      } as any,
+      this.formatCompactPrice(this.getGrossPrice(product)),
+      this.formatCompactPrice(this.getNetPriceWithoutTax(product)),
+      this.formatCompactPrice(this.getUnitGrossPrice(product)),
+      this.formatCompactPrice(this.getUnitNetPriceWithoutTax(product)),
+      this.getCategoryLabel(product)
+    ]));
+
+    return rows;
+  }
+
+  private getCommercePdfRowCode(product: Product): string {
+    return product.sku?.trim() || product.id;
+  }
+
+  private getCommercePdfImagePaths(product: Product): string[] {
+    if (!product.image) {
+      return [];
+    }
+
+    const normalizedName = this.normalizeText(product.name);
+    const candidates: Array<[string, string]> = [
+      ['mate cocido don julian', 'assets/pdf-products/MC Mate cocido DON JULIAN.jpeg'],
+      ['yerbella', 'assets/pdf-products/YM Yerbella ORGANICA.jpeg'],
+      ['don julian', 'assets/pdf-products/YM Don Julian.jpeg'],
+      ['mateite premium', 'assets/products/YM MATEITE PREMIUM.jpeg'],
+      ['mateite', 'assets/pdf-products/YM Mateite.jpeg'],
+      ['caricias de mate suave', 'assets/pdf-products/YM Caricias de Mate SUAVE.jpeg'],
+      ['caricias de mate tradicional', 'assets/pdf-products/YM Caricias de Mate TRADICIONAL.jpeg'],
+      ['mate y playa tradicional', 'assets/pdf-products/YM  Mate y Playa TRADICIONAL.jpeg'],
+      ['mate y playa terere', 'assets/pdf-products/YM Mate y Playa Terere.jpeg']
+    ];
+    const matchedCandidate = candidates.find(([productName]) => normalizedName.includes(productName));
+
+    return matchedCandidate ? [matchedCandidate[1], product.image] : [product.image];
+  }
+
+  private async loadCommercePdfImageFromCandidates(imagePaths: string[]): Promise<string | null> {
+    for (const imagePath of imagePaths) {
+      const imageData = await this.loadCommercePdfThumbnail(imagePath);
+      if (imageData) {
+        return imageData;
+      }
+    }
+
+    return null;
+  }
+
+  private async loadCommercePdfThumbnail(imagePath: string): Promise<string | null> {
+    const sourceData = await this.loadCommercePdfAsset(imagePath);
+    if (!sourceData || typeof document === 'undefined') {
+      return null;
+    }
+
+    return await new Promise<string | null>((resolve) => {
+      const image = new Image();
+
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) {
+          resolve(null);
+          return;
+        }
+
+        const size = 180;
+        const innerSize = 148;
+        const ratio = Math.min(innerSize / image.width, innerSize / image.height);
+        const width = image.width * ratio;
+        const height = image.height * ratio;
+
+        canvas.width = size;
+        canvas.height = size;
+        context.fillStyle = '#f6f8ee';
+        context.fillRect(0, 0, size, size);
+        context.strokeStyle = '#d3dcc0';
+        context.lineWidth = 4;
+        context.strokeRect(2, 2, size - 4, size - 4);
+        context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      image.onerror = () => resolve(null);
+      image.src = sourceData;
+    });
+  }
+
+  private async loadCommercePdfAsset(imagePath: string): Promise<string | null> {
+    if (typeof fetch === 'undefined' || typeof FileReader === 'undefined' || typeof document === 'undefined') {
+      return null;
+    }
+
+    try {
+      const response = await fetch(new URL(imagePath, document.baseURI).toString());
+      if (!response.ok) {
+        return null;
+      }
+
+      const blob = await response.blob();
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private async loadCommercePdfLogo(imagePath: string): Promise<string | null> {
+    const sourceData = await this.loadCommercePdfAsset(imagePath);
+    if (!sourceData || typeof document === 'undefined') {
+      return null;
+    }
+
+    return await new Promise<string | null>((resolve) => {
+      const image = new Image();
+
+      image.onload = () => {
+        const size = 220;
+        const padding = 12;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) {
+          resolve(null);
+          return;
+        }
+
+        canvas.width = size;
+        canvas.height = size;
+        context.save();
+        context.beginPath();
+        context.arc(size / 2, size / 2, size / 2 - padding, 0, Math.PI * 2);
+        context.clip();
+
+        const ratio = Math.max((size - padding * 2) / image.width, (size - padding * 2) / image.height);
+        const width = image.width * ratio;
+        const height = image.height * ratio;
+        context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+        context.restore();
+        context.beginPath();
+        context.arc(size / 2, size / 2, size / 2 - padding, 0, Math.PI * 2);
+        context.lineWidth = 6;
+        context.strokeStyle = '#d3dcc0';
+        context.stroke();
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      image.onerror = () => resolve(null);
+      image.src = sourceData;
+    });
+  }
+
+  private drawCommercePdfHeader(pdf: any, logoData: string | null): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const headerX = (pageWidth - this.pdfDetailWidth) / 2;
+    const headerY = 8;
+    const headerWidth = this.pdfDetailWidth;
+    const headerHeight = 17;
+
+    pdf.setFillColor(248, 249, 243);
+    pdf.roundedRect(headerX, headerY, headerWidth, headerHeight, 1.8, 1.8, 'F');
+    pdf.setFillColor(84, 111, 63);
+    pdf.roundedRect(headerX, headerY, headerWidth, 2.4, 1.8, 1.8, 'F');
+    pdf.rect(headerX, headerY + 1.2, headerWidth, 1.2, 'F');
+    pdf.setDrawColor(205, 214, 181);
+    pdf.setLineWidth(0.2);
+    pdf.roundedRect(headerX, headerY, headerWidth, headerHeight, 1.8, 1.8, 'S');
+
+    pdf.setTextColor(94, 119, 73);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(5.4);
+    pdf.text('sansaju.ventas@gmail.com', headerX + 4.2, headerY + 5.2);
+    pdf.setTextColor(42, 59, 33);
+    pdf.setFontSize(7.2);
+    pdf.text('Whatsapp 3758-418515', headerX + 4.2, headerY + 9);
+
+    pdf.setTextColor(43, 52, 36);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.1);
+    pdf.text(`Comercios y puntos de venta - ${this.getPdfGeneratedDateLabel()}`, headerX + headerWidth / 2, headerY + 6.9, { align: 'center' });
+    pdf.setTextColor(92, 107, 81);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.6);
+    pdf.text('Detalle de precios comerciales segun la vista actual', headerX + headerWidth / 2, headerY + 10.6, { align: 'center' });
+
+    if (logoData) {
+      try {
+        const logoAnchorRight = headerX + headerWidth - 4.2;
+        const logoProps = pdf.getImageProperties(logoData);
+        const logoRatio = logoProps.width / logoProps.height;
+        let renderWidth = 18.5;
+        let renderHeight = renderWidth / logoRatio;
+        if (renderHeight > 11.5) {
+          renderHeight = 11.5;
+          renderWidth = renderHeight * logoRatio;
+        }
+        pdf.addImage(logoData, 'PNG', logoAnchorRight - renderWidth, headerY + (headerHeight - renderHeight) / 2 + 0.8, renderWidth, renderHeight);
+      } catch {
+        // Si el logo no se puede renderizar, el PDF sigue sin interrumpirse.
+      }
+    }
+
+    pdf.setDrawColor(214, 221, 191);
+    pdf.line(headerX, 24.8, headerX + headerWidth, 24.8);
   }
 
   private getUnitDivisor(product: Product): number {

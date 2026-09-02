@@ -59,7 +59,17 @@
 
     <article class="list-row" *ngFor="let product of displayedProducts">
       <div class="product-main">
-        <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
+        <img
+          *ngIf="product.image"
+          class="product-thumb"
+          [src]="product.image"
+          [alt]="product.name"
+          (click)="openImagePreview(product)"
+          role="button"
+          tabindex="0"
+          (keydown.enter)="openImagePreview(product)"
+          (keydown.space)="openImagePreview(product); $event.preventDefault()"
+        >
         <div class="product-text">
           <h3>{{ product.name }}</h3>
           <details>
@@ -68,10 +78,6 @@
             <p>Precio unitario s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</p>
           </details>
           <p *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
-          <p class="sale-suggested">
-            Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
-            <small>(+40% a +50%)</small>
-          </p>
           <small>{{ getCategoryLabel(product) }}</small>
         </div>
       </div>
@@ -223,6 +229,46 @@
       <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Enviar por WhatsApp</button>
     </footer>
   </section>
+</div>
+
+<div class="product-image-modal" *ngIf="showImagePreview" (click)="closeImagePreview()">
+  <div class="product-image-modal-dialog" (click)="$event.stopPropagation()">
+    <button
+      type="button"
+      class="product-image-modal-close"
+      (click)="closeImagePreview()"
+      aria-label="Cerrar vista previa"
+    >
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+
+    <div class="product-image-modal-media">
+      <img
+        *ngIf="selectedImagePreviewUrl"
+        class="product-image-modal-content"
+        [src]="selectedImagePreviewUrl"
+        [alt]="selectedImagePreviewAlt"
+        (error)="onImagePreviewError()"
+      >
+    </div>
+
+    <section class="product-image-modal-details" *ngIf="selectedImagePreviewProduct as product">
+      <small>{{ getCategoryLabel(product) }}</small>
+      <h2>{{ product.name }}</h2>
+
+      <div class="product-image-price-row">
+        <span>Precio por pack</span>
+        <strong>{{ formatPrice(getGrossPrice(product)) }}</strong>
+        <small>Neto s/IVA: {{ formatPrice(getNetPriceWithoutTax(product)) }}</small>
+      </div>
+
+      <div class="product-image-price-row">
+        <span>Precio unitario</span>
+        <strong>{{ formatPrice(getUnitGrossPrice(product)) }}</strong>
+        <small>Neto s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</small>
+      </div>
+    </section>
+  </div>
 </div>
 
 <div class="wholesale-loading-overlay" *ngIf="isGeneratingPdf" aria-live="assertive" aria-busy="true">

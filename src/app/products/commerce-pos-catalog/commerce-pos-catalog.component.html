@@ -119,7 +119,17 @@
 
     <article class="list-row" *ngFor="let product of displayedProducts">
       <div class="product-main">
-        <img *ngIf="product.image" class="product-thumb" [src]="product.image" [alt]="product.name">
+        <img
+          *ngIf="product.image"
+          class="product-thumb"
+          [src]="product.image"
+          [alt]="product.name"
+          (click)="openImagePreview(product)"
+          role="button"
+          tabindex="0"
+          (keydown.enter)="openImagePreview(product)"
+          (keydown.space)="openImagePreview(product); $event.preventDefault()"
+        >
         <div class="product-text">
           <h3>{{ product.name }}</h3>
           <details>
@@ -187,6 +197,9 @@
     </div>
 
     <div class="summary-actions">
+      <button type="button" class="btn-send" (click)="downloadCatalogPdf()" [disabled]="filteredProducts.length === 0 || isGeneratingPdf">
+        {{ isGeneratingPdf ? 'Generando PDF...' : 'Descargar PDF' }}
+      </button>
       <button type="button" class="btn-clear" (click)="clearOrder()" [disabled]="orderItems.length === 0">
         <i class="fas fa-trash" aria-hidden="true"></i>
         <span>Vaciar</span>
@@ -280,4 +293,44 @@
       <button type="button" class="btn-modal success" (click)="confirmAndSendOrderViaWhatsApp()">Enviar por WhatsApp</button>
     </footer>
   </section>
+</div>
+
+<div class="product-image-modal" *ngIf="showImagePreview" (click)="closeImagePreview()">
+  <div class="product-image-modal-dialog" (click)="$event.stopPropagation()">
+    <button
+      type="button"
+      class="product-image-modal-close"
+      (click)="closeImagePreview()"
+      aria-label="Cerrar vista previa"
+    >
+      <i class="fas fa-times" aria-hidden="true"></i>
+    </button>
+
+    <div class="product-image-modal-media">
+      <img
+        *ngIf="selectedImagePreviewUrl"
+        class="product-image-modal-content"
+        [src]="selectedImagePreviewUrl"
+        [alt]="selectedImagePreviewAlt"
+        (error)="onImagePreviewError()"
+      >
+    </div>
+
+    <section class="product-image-modal-details" *ngIf="selectedImagePreviewProduct as product">
+      <small>{{ getCategoryLabel(product) }}</small>
+      <h2>{{ product.name }}</h2>
+
+      <div class="product-image-price-row">
+        <span>Precio por pack</span>
+        <strong>{{ formatPrice(getGrossPrice(product)) }}</strong>
+        <small>Neto s/IVA: {{ formatPrice(getNetPriceWithoutTax(product)) }}</small>
+      </div>
+
+      <div class="product-image-price-row">
+        <span>Precio unitario</span>
+        <strong>{{ formatPrice(getUnitGrossPrice(product)) }}</strong>
+        <small>Neto s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</small>
+      </div>
+    </section>
+  </div>
 </div>

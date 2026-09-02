@@ -6,6 +6,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "deploy": "ng build --configuration production && angular-cli-ghpages --dir=dist/app-catalogo",
     "watch": "ng build --watch --configuration development",
     "supabase:seed": "node scripts/generate-supabase-seed.mjs"
   },
