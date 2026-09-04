@@ -91,6 +91,62 @@
     </aside>
 
     <section class="admin-content">
+      <section class="catalog-management" aria-label="Gestion de catalogos">
+        <header class="catalog-management-header">
+          <div>
+            <span class="section-kicker">Gestion de catalogos</span>
+            <h2>Alta, edicion y estado</h2>
+          </div>
+          <button type="button" class="new-catalog-button" (click)="createNewCatalog()" [disabled]="isSavingCatalog">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            Nuevo catalogo
+          </button>
+        </header>
+
+        <div class="catalog-management-grid">
+          <div class="catalog-admin-list">
+            <p *ngIf="isLoadingCatalogs">Cargando catalogos...</p>
+            <article *ngFor="let catalog of catalogs" [class.inactive]="catalog.isActive === false">
+              <button type="button" class="catalog-edit-button" (click)="editCatalog(catalog)">
+                <strong>{{ catalog.name }}</strong>
+                <small>{{ catalog.isActive === false ? 'Inactivo' : 'Activo' }} · {{ catalog.priceLabel }}</small>
+              </button>
+              <button
+                type="button"
+                class="catalog-state-button"
+                [class.reactivate]="catalog.isActive === false"
+                [disabled]="isSavingCatalog || catalog.isPublicSale"
+                [title]="catalog.isPublicSale ? 'La fuente PVP no puede desactivarse' : (catalog.isActive === false ? 'Reactivar' : 'Desactivar')"
+                (click)="setCatalogActive(catalog)"
+              >
+                <i class="fas" [class.fa-toggle-on]="catalog.isActive !== false" [class.fa-toggle-off]="catalog.isActive === false" aria-hidden="true"></i>
+              </button>
+            </article>
+          </div>
+
+          <div class="catalog-form">
+            <h3>{{ isEditingCatalog ? 'Modificar catalogo' : 'Dar de alta un catalogo' }}</h3>
+            <label>
+              <span>Nombre</span>
+              <input type="text" [(ngModel)]="catalogForm.name" placeholder="Ej: Catalogo promociones">
+            </label>
+            <label>
+              <span>Descripcion</span>
+              <textarea [(ngModel)]="catalogForm.description" rows="3" placeholder="Descripcion visible en el dashboard"></textarea>
+            </label>
+            <label>
+              <span>Etiqueta de precio</span>
+              <input type="text" [(ngModel)]="catalogForm.priceLabel" placeholder="Ej: Precio promocional">
+            </label>
+            <p class="catalog-route" *ngIf="isEditingCatalog">Ruta: {{ catalogForm.route }}</p>
+            <button type="button" class="save-catalog-button" (click)="saveCatalog()" [disabled]="isSavingCatalog">
+              <i class="fas fa-save" aria-hidden="true"></i>
+              {{ isSavingCatalog ? 'Guardando...' : 'Guardar catalogo' }}
+            </button>
+          </div>
+        </div>
+      </section>
+
       <div class="catalog-heading">
         <div>
           <span class="section-kicker">Catalogo seleccionado</span>
@@ -192,6 +248,10 @@
 
         <div class="pricing-simple-actions">
           <span>{{ pricingRows.length }} productos en la lista</span>
+          <button type="button" class="pricing-margin-button" (click)="downloadMarginsPdf()" [disabled]="pricingRows.length === 0 || isGeneratingMarginsPdf">
+            <i class="fas" [class.fa-file-pdf]="!isGeneratingMarginsPdf" [class.fa-circle-notch]="isGeneratingMarginsPdf" [class.fa-spin]="isGeneratingMarginsPdf" aria-hidden="true"></i>
+            {{ isGeneratingMarginsPdf ? 'Generando PDF...' : 'Generar PDF de margenes' }}
+          </button>
           <button type="button" class="pricing-apply-button" (click)="applyAllCalculatedPrices()" [disabled]="pricingRows.length === 0">
             <i class="fas fa-check-double" aria-hidden="true"></i>
             Aplicar todos los precios propuestos

@@ -1,6 +1,4 @@
-import type { PriceCatalogId } from '../services/product.service';
-
-export type PricingCatalogId = Extract<PriceCatalogId, 'commerce-pos' | 'distributor-pallet' | 'wholesale' | 'retail'>;
+export type PricingCatalogId = 'commerce-pos' | 'distributor-pallet' | 'wholesale' | 'retail';
 
 export interface SalesChannel {
   id: string;

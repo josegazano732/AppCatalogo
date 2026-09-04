@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { PriceAdminComponent } from './admin/price-admin/price-admin.component';
 import { CatalogHubComponent } from './home/catalog-hub.component';
+import { GenericCatalogComponent } from './products/generic-catalog/generic-catalog.component';
 import { CommercePosCatalogComponent } from './products/commerce-pos-catalog/commerce-pos-catalog.component';
 import { DistributorPalletCatalogComponent } from './products/distributor-pallet-catalog/distributor-pallet-catalog.component';
 import { HolowatyCatalogComponent } from './products/holowaty-catalog/holowaty-catalog.component';
@@ -47,6 +48,10 @@ const routes: Routes = [
   {
     path: 'holowaty',
     component: HolowatyCatalogComponent
+  },
+  {
+    path: 'catalogo/:id',
+    component: GenericCatalogComponent
   },
   {
     path: '**',

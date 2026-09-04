@@ -1,0 +1,42 @@
+<main class="catalog-shell" *ngIf="catalog">
+  <header class="catalog-header">
+    <a routerLink="/" aria-label="Volver al inicio"><i class="fas fa-arrow-left" aria-hidden="true"></i></a>
+    <div>
+      <p>{{ catalog.priceLabel }}</p>
+      <h1>{{ catalog.name }}</h1>
+      <span>{{ catalog.description }}</span>
+    </div>
+    <img src="assets/branding/amate-logo.jpg" alt="AMATE">
+  </header>
+
+  <section class="catalog-filters">
+    <label>
+      <span>Buscar producto</span>
+      <input type="search" [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Nombre o descripcion">
+    </label>
+    <label>
+      <span>Categoria</span>
+      <select [(ngModel)]="selectedCategory" (ngModelChange)="applyFilters()">
+        <option value="">Todas</option>
+        <option *ngFor="let category of categories" [value]="category">{{ category }}</option>
+      </select>
+    </label>
+    <strong>{{ filteredProducts.length }} productos</strong>
+  </section>
+
+  <p class="catalog-state" *ngIf="isLoading">Cargando catalogo...</p>
+  <p class="catalog-state error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <section class="product-grid" *ngIf="!isLoading && !errorMessage">
+    <article *ngFor="let product of filteredProducts">
+      <img *ngIf="product.image" [src]="product.image" [alt]="product.name">
+      <div>
+        <small>{{ getCategoryLabel(product) }}</small>
+        <h2>{{ product.name }}</h2>
+        <p>{{ product.description }}</p>
+      </div>
+      <strong>{{ formatPrice(product.wholesale_price ?? product.price) }}</strong>
+    </article>
+    <p class="catalog-state" *ngIf="filteredProducts.length === 0">No hay productos para mostrar.</p>
+  </section>
+</main>

@@ -387,8 +387,15 @@
   }
 
   .hub-admin-link {
+    width: 38px;
     min-height: 36px;
+    padding: 0;
+    justify-content: center;
     font-size: 12px;
+  }
+
+  .hub-admin-link span {
+    display: none;
   }
 
   .hub-hero {

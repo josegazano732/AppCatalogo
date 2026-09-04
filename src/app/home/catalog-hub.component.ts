@@ -1,11 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 
+import { PriceCatalog, ProductService } from '../services/product.service';
 import { CatalogPdfDocument, SupabaseService } from '../services/supabase.service';
 
-type HubCatalogId = 'wholesale' | 'commerce-pos' | 'retail';
-
 interface HubCatalogCard {
-  id: HubCatalogId;
+  id: string;
   title: string;
   subtitle: string;
   route: string;
@@ -18,45 +17,42 @@ interface HubCatalogCard {
   styleUrls: ['./catalog-hub.component.css']
 })
 export class CatalogHubComponent implements OnInit {
-  readonly cards: HubCatalogCard[] = [
-    {
-      id: 'wholesale',
-      title: 'Catalogo - Mayorista',
-      subtitle: 'CATALOGO - MAYORISTA',
-      route: '/catalogo-mayorista',
-      description: 'Acceso directo al catalogo mayorista con precios por volumen.'
-    },
-    {
-      id: 'commerce-pos',
-      title: 'Catalogo - Comercios y Punto de Ventas',
-      subtitle: 'COMERCIOS Y PUNTO DE VENTAS',
-      route: '/catalogo-comercios-punto-de-ventas',
-      description: 'Catalogo orientado a revendedores, kioscos y puntos de venta.'
-    },
-    {
-      id: 'retail',
-      title: 'PVP - Consumidor Final',
-      subtitle: 'PVP CONSUMIDOR FINAL',
-      route: '/catalogo-minorista',
-      description: 'Precios de venta al consumidor final.'
-    }
-  ];
+  cards: HubCatalogCard[] = [];
 
   isLoading = true;
-  pdfByCatalog: Record<HubCatalogId, CatalogPdfDocument[]> = {
-    'wholesale': [],
-    'commerce-pos': [],
-    'retail': []
-  };
+  pdfByCatalog: Record<string, CatalogPdfDocument[]> = {};
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly supabase: SupabaseService
+  ) {}
 
   ngOnInit(): void {
-    void this.loadPdfReferences();
+    this.loadCatalogs();
   }
 
-  getPdfList(catalogId: HubCatalogId): CatalogPdfDocument[] {
+  getPdfList(catalogId: string): CatalogPdfDocument[] {
     return this.pdfByCatalog[catalogId] ?? [];
+  }
+
+  private loadCatalogs(): void {
+    this.isLoading = true;
+    this.productService.getManagedCatalogs(false).subscribe({
+      next: (catalogs: PriceCatalog[]) => {
+        this.cards = catalogs.map((catalog: PriceCatalog) => ({
+          id: catalog.id,
+          title: catalog.name,
+          subtitle: catalog.priceLabel,
+          route: catalog.route || `/catalogo/${catalog.id}`,
+          description: catalog.description
+        }));
+        void this.loadPdfReferences();
+      },
+      error: () => {
+        this.cards = [];
+        this.isLoading = false;
+      }
+    });
   }
 
   private async loadPdfReferences(): Promise<void> {

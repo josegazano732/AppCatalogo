@@ -14,6 +14,148 @@ body.wa-modal-open .floating-btn {
   display: none !important;
 }
 
+app-price-admin .catalog-management {
+  margin-bottom: 20px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #dce4df;
+  border-top: 3px solid #e8a13a;
+  border-radius: 7px;
+}
+
+app-price-admin .catalog-management-header {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+app-price-admin .catalog-management-header h2,
+app-price-admin .catalog-form h3 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0;
+}
+
+app-price-admin .new-catalog-button,
+app-price-admin .save-catalog-button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: #fff;
+  font-weight: 700;
+  background: #176b4d;
+  border: 1px solid #0e4e37;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+app-price-admin .catalog-management-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 0.8fr);
+  gap: 18px;
+}
+
+app-price-admin .catalog-admin-list {
+  max-height: 330px;
+  overflow: auto;
+  border: 1px solid #dce4df;
+}
+
+app-price-admin .catalog-admin-list article {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 1fr 46px;
+  border-bottom: 1px solid #dce4df;
+}
+
+app-price-admin .catalog-admin-list article:last-child {
+  border-bottom: 0;
+}
+
+app-price-admin .catalog-admin-list article.inactive {
+  opacity: 0.6;
+  background: #f3f6f4;
+}
+
+app-price-admin .catalog-edit-button {
+  padding: 10px 12px;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  color: #15221d;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+app-price-admin .catalog-edit-button small,
+app-price-admin .catalog-route {
+  color: #65736d;
+}
+
+app-price-admin .catalog-state-button {
+  color: #246d50;
+  font-size: 20px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+app-price-admin .catalog-state-button.reactivate {
+  color: #7b8580;
+}
+
+app-price-admin .catalog-state-button:disabled,
+app-price-admin .new-catalog-button:disabled,
+app-price-admin .save-catalog-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+app-price-admin .catalog-form {
+  display: grid;
+  gap: 11px;
+}
+
+app-price-admin .catalog-form label {
+  display: grid;
+  gap: 5px;
+  color: #52615a;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+app-price-admin .catalog-form input,
+app-price-admin .catalog-form textarea {
+  width: 100%;
+  padding: 10px;
+  color: #15221d;
+  font: inherit;
+  text-transform: none;
+  background: #fff;
+  border: 1px solid #c7d1cb;
+  border-radius: 5px;
+  resize: vertical;
+}
+
+app-price-admin .catalog-route {
+  margin: 0;
+  font-size: 12px;
+}
+
+@media (max-width: 820px) {
+  app-price-admin .catalog-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  app-price-admin .catalog-management-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 640px) {
   .floating-btn {
     display: none;

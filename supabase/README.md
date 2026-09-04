@@ -16,12 +16,17 @@ El instalador tambien incluye el modulo de pricing comercial. En una base ya ins
 - `supabase/migrations/202609040002_scalable_product_pricing.sql`
 - `supabase/migrations/202609040003_repair_commercial_keys.sql`
 - `supabase/migrations/202609040004_sync_product_identity_from_pvp.sql`
+- `supabase/migrations/202609040005_catalog_management.sql`
 
 La herramienta queda integrada en `#/administracion/precios` para usuarios incluidos en `admin_users`.
 
 La ultima migracion agrega una `commercial_key` para relacionar productos entre listas sin depender del nombre y permite definir una unica lista como fuente de PVP desde el panel administrativo.
 
 La migracion `202609040004` copia SKU y marca desde la lista configurada como fuente PVP hacia los productos equivalentes de las demas listas. Tambien instala un trigger para mantenerlos sincronizados cuando esos datos cambian en PVP.
+
+La migracion `202609040005` habilita la activacion y desactivacion segura de catalogos. Los catalogos inactivos conservan sus productos y precios, pero dejan de aparecer en el dashboard. No se puede desactivar la fuente PVP ni el ultimo catalogo activo.
+
+Desde `#/administracion/precios` se pueden crear catalogos, modificar su nombre, descripcion y etiqueta de precio, y cambiar su estado. Los catalogos nuevos reciben una ruta generica automaticamente.
 
 ## Habilitar un administrador
 

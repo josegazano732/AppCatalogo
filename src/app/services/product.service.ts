@@ -3,9 +3,9 @@ import { Observable, catchError, combineLatest, from, map, of, switchMap } from 
 
 import { Product } from '../models/product.model';
 import { attachPvpReferences } from './pricing-calculator';
-import { SupabaseService } from './supabase.service';
+import { CatalogRecord, SupabaseService } from './supabase.service';
 
-export type PriceCatalogId = 'whatsapp' | 'commerce-pos' | 'distributor-pallet' | 'wholesale' | 'retail' | 'holowaty';
+export type PriceCatalogId = string;
 
 export interface PriceCatalog {
   id: PriceCatalogId;
@@ -14,6 +14,7 @@ export interface PriceCatalog {
   route: string;
   priceLabel: string;
   isPublicSale?: boolean;
+  isActive?: boolean;
 }
 
 export interface ProductPriceUpdate {
@@ -746,6 +747,23 @@ export class ProductService {
     return this.priceCatalogs.map((catalog: PriceCatalog) => ({ ...catalog }));
   }
 
+  getManagedCatalogs(includeInactive = false): Observable<PriceCatalog[]> {
+    return from(this.supabase.getCatalogs(includeInactive)).pipe(
+      map((catalogs: CatalogRecord[]) => catalogs.length > 0
+        ? catalogs.map((catalog: CatalogRecord) => ({
+          id: catalog.id,
+          name: catalog.name,
+          description: catalog.description,
+          route: catalog.route,
+          priceLabel: catalog.priceLabel,
+          isPublicSale: catalog.isPublicSale,
+          isActive: catalog.isActive
+        }))
+        : this.getPriceCatalogs().filter((catalog: PriceCatalog) => includeInactive || catalog.isActive !== false)),
+      catchError(() => of(this.getPriceCatalogs().filter((catalog: PriceCatalog) => includeInactive || catalog.isActive !== false)))
+    );
+  }
+
   getPriceCatalogProducts(catalogId: PriceCatalogId): Observable<Product[]> {
     return this.getCatalogProducts(catalogId);
   }
@@ -834,6 +852,9 @@ export class ProductService {
     let products: Product[];
 
     switch (catalogId) {
+      case 'whatsapp':
+        products = this.baseProducts;
+        break;
       case 'commerce-pos':
         products = [...this.baseProducts, ...this.commercePosExtraProducts];
         break;
@@ -854,7 +875,7 @@ export class ProductService {
         }));
         break;
       default:
-        products = this.baseProducts;
+        products = [];
     }
 
     const catalogOverrides = this.readPriceOverrides()[catalogId] ?? {};

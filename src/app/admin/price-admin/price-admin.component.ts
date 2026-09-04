@@ -11,7 +11,7 @@ import {
   ProductPriceUpdate,
   ProductService
 } from '../../services/product.service';
-import { CatalogPdfDocument, CatalogProductUpsert, SupabaseService } from '../../services/supabase.service';
+import { CatalogPdfDocument, CatalogProductUpsert, CatalogUpsert, SupabaseService } from '../../services/supabase.service';
 
 type AdminAccessState = 'loading' | 'signed-out' | 'unauthorized' | 'admin';
 
@@ -41,13 +41,21 @@ interface ProductPricingRow {
   proposedCatalogPrice: number | null;
 }
 
+interface CatalogFormState {
+  id: string;
+  name: string;
+  description: string;
+  route: string;
+  priceLabel: string;
+}
+
 @Component({
   selector: 'app-price-admin',
   templateUrl: './price-admin.component.html',
   styleUrls: ['./price-admin.component.css']
 })
 export class PriceAdminComponent implements OnInit {
-  readonly catalogs: PriceCatalog[];
+  catalogs: PriceCatalog[];
   readonly pricingMargins = [...DEFAULT_SCENARIO_MARGINS];
 
   selectedCatalogId: PriceCatalogId = 'whatsapp';
@@ -88,8 +96,13 @@ export class PriceAdminComponent implements OnInit {
   pricingBulkMargin = 25;
   isCalculatingPrice = false;
   isSavingPricingRule = false;
+  isGeneratingMarginsPdf = false;
   publicSaleCatalogId: PriceCatalogId = 'retail';
   isSavingPublicSaleCatalog = false;
+  isLoadingCatalogs = false;
+  isSavingCatalog = false;
+  editingCatalogId: string | null = null;
+  catalogForm: CatalogFormState = this.createEmptyCatalogForm();
 
   private originalPrices: Record<string, number> = {};
 
@@ -119,6 +132,10 @@ export class PriceAdminComponent implements OnInit {
 
   get isEditingProduct(): boolean {
     return Boolean(this.editingProductId);
+  }
+
+  get isEditingCatalog(): boolean {
+    return this.editingCatalogId !== null;
   }
 
   get supportsCommercialPricing(): boolean {
@@ -221,6 +238,84 @@ export class PriceAdminComponent implements OnInit {
     this.loadCatalog();
   }
 
+  createNewCatalog(): void {
+    this.editingCatalogId = null;
+    this.catalogForm = this.createEmptyCatalogForm();
+    this.clearFeedback();
+  }
+
+  editCatalog(catalog: PriceCatalog): void {
+    this.editingCatalogId = catalog.id;
+    this.catalogForm = {
+      id: catalog.id,
+      name: catalog.name,
+      description: catalog.description,
+      route: catalog.route,
+      priceLabel: catalog.priceLabel
+    };
+    this.clearFeedback();
+  }
+
+  async saveCatalog(): Promise<void> {
+    const name = this.catalogForm.name.trim();
+    const priceLabel = this.catalogForm.priceLabel.trim();
+    if (!name || !priceLabel) {
+      this.showFeedback('Completa el nombre y la etiqueta de precio del catalogo.', 'error');
+      return;
+    }
+
+    this.isSavingCatalog = true;
+    this.clearFeedback();
+    const wasEditing = this.isEditingCatalog;
+    const id = this.editingCatalogId ?? this.createCatalogId(name);
+    const catalog: CatalogUpsert = {
+      id,
+      name,
+      description: this.catalogForm.description.trim(),
+      route: wasEditing ? this.catalogForm.route : `/catalogo/${id}`,
+      priceLabel
+    };
+
+    try {
+      if (wasEditing) {
+        await this.supabase.updateCatalog(catalog);
+      } else {
+        await this.supabase.createCatalog(catalog);
+      }
+      await this.loadManagedCatalogs();
+      const savedCatalog = this.catalogs.find((item: PriceCatalog) => item.id === id);
+      if (savedCatalog) {
+        this.editCatalog(savedCatalog);
+      }
+      this.showFeedback(`Catalogo ${wasEditing ? 'actualizado' : 'creado'} correctamente.`, 'success');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      this.showFeedback(message.includes('duplicate') ? 'Ya existe un catalogo con ese identificador.' : 'No se pudo guardar el catalogo.', 'error');
+    } finally {
+      this.isSavingCatalog = false;
+    }
+  }
+
+  async setCatalogActive(catalog: PriceCatalog): Promise<void> {
+    const nextActive = catalog.isActive === false;
+    const action = nextActive ? 'reactivar' : 'desactivar';
+    if (!window.confirm(`¿Quieres ${action} "${catalog.name}"?`)) {
+      return;
+    }
+
+    this.isSavingCatalog = true;
+    this.clearFeedback();
+    try {
+      await this.supabase.setCatalogActive(catalog.id, nextActive);
+      await this.loadManagedCatalogs();
+      this.showFeedback(`Catalogo ${nextActive ? 'reactivado' : 'desactivado'} correctamente.`, 'success');
+    } catch (error: unknown) {
+      this.showFeedback(error instanceof Error ? error.message : 'No se pudo cambiar el estado del catalogo.', 'error');
+    } finally {
+      this.isSavingCatalog = false;
+    }
+  }
+
   applyFilters(): void {
     const normalizedSearch = this.normalizeText(this.searchTerm);
 
@@ -305,6 +400,100 @@ export class PriceAdminComponent implements OnInit {
       this.priceDrafts[row.product.id] = this.formatEditablePrice(row.proposedCatalogPrice as number);
     });
     this.showFeedback(`Se aplicaron ${applicableRows.length} precios calculados. Revisa la tabla inferior y usa Guardar cambios para confirmar.`, 'success');
+  }
+
+  async downloadMarginsPdf(): Promise<void> {
+    if (this.pricingRows.length === 0 || this.isGeneratingMarginsPdf) {
+      return;
+    }
+
+    this.isGeneratingMarginsPdf = true;
+    this.clearFeedback();
+
+    try {
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const autoTable = autoTableModule.default;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const availableTableHeight = pdf.internal.pageSize.getHeight() - 34;
+      const rowHeight = Math.min(7.2, availableTableHeight / (this.pricingRows.length + 1));
+      const fontSize = Math.max(4.2, Math.min(7, rowHeight * 0.72));
+      const body = this.pricingRows.map((row: ProductPricingRow) => [
+        row.product.name,
+        this.formatOptionalPrice(row.pvpFinal),
+        this.formatPrice(row.currentCatalogPrice),
+        this.formatOptionalPercent(row.currentMarginPercent),
+        this.formatPercent(row.targetMarginPercent),
+        this.formatOptionalPrice(row.proposedCatalogPrice)
+      ]);
+
+      pdf.setTextColor(21, 34, 29);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text('Margenes actuales y objetivo', 10, 12);
+      pdf.setFontSize(9);
+      pdf.text(`Productos de ${this.selectedCatalog.name}`, 10, 18);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(101, 115, 109);
+      pdf.text(`Generado: ${new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date())}`, pageWidth - 10, 18, { align: 'right' });
+
+      autoTable(pdf, {
+        startY: 23,
+        margin: { left: 18, right: 18, bottom: 8 },
+        theme: 'grid',
+        pageBreak: 'avoid',
+        rowPageBreak: 'avoid',
+        head: [[
+          'Producto',
+          'PVP Consumidor Final',
+          'Precio actual lista',
+          'Margen actual',
+          'Margen objetivo',
+          'Precio propuesto'
+        ]],
+        body,
+        styles: {
+          font: 'helvetica',
+          fontSize,
+          minCellHeight: rowHeight,
+          cellPadding: { top: 0.5, right: 1, bottom: 0.5, left: 1 },
+          overflow: 'ellipsize',
+          valign: 'middle',
+          lineColor: [205, 219, 210],
+          lineWidth: 0.12,
+          textColor: [40, 55, 48]
+        },
+        headStyles: {
+          fillColor: [23, 107, 77],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        alternateRowStyles: { fillColor: [243, 246, 244] },
+        columnStyles: {
+          0: { cellWidth: 79, halign: 'left' },
+          1: { cellWidth: 38, halign: 'right' },
+          2: { cellWidth: 38, halign: 'right' },
+          3: { cellWidth: 34, halign: 'right' },
+          4: { cellWidth: 34, halign: 'right' },
+          5: { cellWidth: 38, halign: 'right' }
+        }
+      });
+
+      const fileCatalog = this.normalizeText(this.selectedCatalog.name)
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      pdf.save(`margenes-${fileCatalog || this.selectedCatalogId}.pdf`);
+      this.showFeedback('PDF de margenes generado en una hoja A4 horizontal.', 'success');
+    } catch {
+      this.showFeedback('No se pudo generar el PDF de margenes.', 'error');
+    } finally {
+      this.isGeneratingMarginsPdf = false;
+    }
   }
 
   formatPercent(value: number): string {
@@ -738,6 +927,7 @@ export class PriceAdminComponent implements OnInit {
 
       this.accessState = 'admin';
       this.authMessage = '';
+      await this.loadManagedCatalogs();
       await this.loadPublicSaleCatalogId();
       this.loadCatalog();
     } catch {
@@ -754,6 +944,18 @@ export class PriceAdminComponent implements OnInit {
       }
     } catch {
       this.publicSaleCatalogId = 'retail';
+    }
+  }
+
+  private async loadManagedCatalogs(): Promise<void> {
+    this.isLoadingCatalogs = true;
+    try {
+      this.catalogs = await firstValueFrom(this.productService.getManagedCatalogs(true));
+      if (!this.catalogs.some((catalog: PriceCatalog) => catalog.id === this.selectedCatalogId)) {
+        this.selectedCatalogId = this.catalogs.find((catalog: PriceCatalog) => catalog.isActive !== false)?.id ?? 'whatsapp';
+      }
+    } finally {
+      this.isLoadingCatalogs = false;
     }
   }
 
@@ -1011,6 +1213,21 @@ export class PriceAdminComponent implements OnInit {
       price: '',
       imageUrl: ''
     };
+  }
+
+  private createEmptyCatalogForm(): CatalogFormState {
+    return {
+      id: '',
+      name: '',
+      description: '',
+      route: '',
+      priceLabel: 'Precio'
+    };
+  }
+
+  private createCatalogId(name: string): string {
+    const slug = this.normalizeText(name).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return `${slug || 'catalogo'}-${Date.now()}`;
   }
 
   private createProductId(name: string): string {

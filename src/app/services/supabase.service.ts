@@ -5,6 +5,24 @@ import { environment } from '../../environments/environment';
 import { Product } from '../models/product.model';
 import type { PriceCalculationInput, PricingRule } from '../models/pricing.model';
 
+export interface CatalogRecord {
+  id: string;
+  name: string;
+  description: string;
+  route: string;
+  priceLabel: string;
+  isPublicSale: boolean;
+  isActive: boolean;
+}
+
+export interface CatalogUpsert {
+  id: string;
+  name: string;
+  description: string;
+  route: string;
+  priceLabel: string;
+}
+
 export interface RemotePriceUpdate {
   productId: string;
   price: number;
@@ -46,6 +64,72 @@ export class SupabaseService {
   private clientPromise?: Promise<SupabaseClient>;
   private readonly pdfReferenceStorageKey = 'app-catalogo-pdf-references-v1';
   private readonly productImagesBucket = 'product-images';
+
+  async getCatalogs(includeInactive = false): Promise<CatalogRecord[]> {
+    const client = await this.getClient();
+    let query = client
+      .from('catalogs')
+      .select('id, name, description, route, price_label, is_public_sale, is_active')
+      .order('name', { ascending: true });
+
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []).map((catalog) => ({
+      id: String(catalog['id']),
+      name: String(catalog['name']),
+      description: String(catalog['description'] ?? ''),
+      route: String(catalog['route']),
+      priceLabel: String(catalog['price_label']),
+      isPublicSale: Boolean(catalog['is_public_sale']),
+      isActive: Boolean(catalog['is_active'])
+    }));
+  }
+
+  async createCatalog(catalog: CatalogUpsert): Promise<void> {
+    const client = await this.getAuthenticatedClient('crear catalogos');
+    const { error } = await client.from('catalogs').insert({
+      id: catalog.id,
+      name: catalog.name,
+      description: catalog.description,
+      route: catalog.route,
+      price_label: catalog.priceLabel,
+      is_active: true
+    });
+    if (error) {
+      throw error;
+    }
+  }
+
+  async updateCatalog(catalog: CatalogUpsert): Promise<void> {
+    const client = await this.getAuthenticatedClient('actualizar catalogos');
+    const { error } = await client.from('catalogs').update({
+      name: catalog.name,
+      description: catalog.description,
+      route: catalog.route,
+      price_label: catalog.priceLabel
+    }).eq('id', catalog.id);
+    if (error) {
+      throw error;
+    }
+  }
+
+  async setCatalogActive(catalogId: string, isActive: boolean): Promise<void> {
+    const client = await this.getAuthenticatedClient('cambiar el estado del catalogo');
+    const { error } = await client.rpc('set_catalog_active', {
+      target_catalog_id: catalogId,
+      target_is_active: isActive
+    });
+    if (error) {
+      throw error;
+    }
+  }
 
   async getPublicSaleCatalogId(): Promise<string | null> {
     const client = await this.getClient();
@@ -773,6 +857,17 @@ export class SupabaseService {
     if (priceError) {
       throw priceError;
     }
+  }
+
+  private async getAuthenticatedClient(action: string): Promise<SupabaseClient> {
+    const client = await this.getClient();
+    const { data: sessionData } = await client.auth.getSession();
+
+    if (!sessionData.session) {
+      throw new Error(`Se requiere una sesion administrativa para ${action}.`);
+    }
+
+    return client;
   }
 
   private getClient(): Promise<SupabaseClient> {
