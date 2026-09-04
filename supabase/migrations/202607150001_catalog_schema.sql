@@ -6,6 +6,7 @@ create table if not exists public.catalogs (
   description text not null default '',
   route text not null,
   price_label text not null,
+  is_public_sale boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -19,12 +20,21 @@ create table if not exists public.products (
   image text,
   unit_of_measure text,
   sku text,
+  commercial_key text,
   brand text,
   stock numeric not null default 0 check (stock >= 0),
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists products_commercial_key_idx
+  on public.products (commercial_key)
+  where commercial_key is not null;
+
+create unique index if not exists catalogs_one_public_sale_idx
+  on public.catalogs (is_public_sale)
+  where is_public_sale;
 
 create table if not exists public.catalog_prices (
   catalog_id text not null references public.catalogs(id) on update cascade on delete cascade,
@@ -195,19 +205,20 @@ grant select, insert, update, delete on public.catalogs, public.products, public
 grant select on public.admin_users, public.price_history to authenticated;
 grant usage, select on sequence public.price_history_id_seq to authenticated;
 
-insert into public.catalogs (id, name, description, route, price_label)
+insert into public.catalogs (id, name, description, route, price_label, is_public_sale)
 values
-  ('whatsapp', 'Catalogo WhatsApp', 'Lista principal de packs para pedidos por WhatsApp.', '/', 'Precio por pack'),
-  ('commerce-pos', 'Comercios y puntos de venta', 'Packs destinados a comercios y puntos de venta.', '/catalogo-comercios-punto-de-ventas', 'Precio por pack'),
-  ('distributor-pallet', 'Distribuidora por pallet', 'Precio base por pack usado para calcular cada pallet.', '/catalogo-distribuidora-pallet', 'Precio base por pack'),
-  ('wholesale', 'Catalogo mayorista', 'Lista mayorista por unidad y presentacion.', '/catalogo-mayorista', 'Precio mayorista'),
-  ('retail', 'Catalogo minorista', 'Precios finales del canal minorista.', '/catalogo-minorista', 'Precio minorista'),
-  ('holowaty', 'Lista Holowaty', 'Precio de lista usado para calcular descuentos y netos.', '/holowaty', 'Precio de lista')
+  ('whatsapp', 'Catalogo WhatsApp', 'Lista principal de packs para pedidos por WhatsApp.', '/', 'Precio por pack', false),
+  ('commerce-pos', 'Comercios y puntos de venta', 'Packs destinados a comercios y puntos de venta.', '/catalogo-comercios-punto-de-ventas', 'Precio por pack', false),
+  ('distributor-pallet', 'Distribuidora por pallet', 'Precio base por pack usado para calcular cada pallet.', '/catalogo-distribuidora-pallet', 'Precio base por pack', false),
+  ('wholesale', 'Catalogo mayorista', 'Lista mayorista por unidad y presentacion.', '/catalogo-mayorista', 'Precio mayorista', false),
+  ('retail', 'PVP - Consumidor Final', 'Precios de venta al consumidor final.', '/catalogo-minorista', 'PVP Consumidor Final', true),
+  ('holowaty', 'Lista Holowaty', 'Precio de lista usado para calcular descuentos y netos.', '/holowaty', 'Precio de lista', false)
 on conflict (id) do update set
   name = excluded.name,
   description = excluded.description,
   route = excluded.route,
   price_label = excluded.price_label,
+  is_public_sale = excluded.is_public_sale,
   is_active = true;
 
 commit;

@@ -142,7 +142,7 @@
             Sugerido de venta: {{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}
             <small>(+40% a +50%)</small>
           </p>
-          <small>{{ getCategoryLabel(product) }}</small>
+          <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
         </div>
       </div>
 
@@ -317,7 +317,7 @@
     </div>
 
     <section class="product-image-modal-details" *ngIf="selectedImagePreviewProduct as product">
-      <small>{{ getCategoryLabel(product) }}</small>
+      <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
       <h2>{{ product.name }}</h2>
 
       <div class="product-image-price-row">

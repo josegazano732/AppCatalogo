@@ -113,7 +113,7 @@ export class RetailCatalogComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
       error: () => {
-        this.errorMessage = 'No se pudo cargar el catalogo minorista. Intenta nuevamente.';
+        this.errorMessage = 'No se pudo cargar PVP - Consumidor Final. Intenta nuevamente.';
         this.isLoading = false;
       }
     });

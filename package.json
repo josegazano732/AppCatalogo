@@ -6,6 +6,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "test": "vitest run",
     "deploy": "ng build --configuration production && angular-cli-ghpages --dir=dist/app-catalogo",
     "watch": "ng build --watch --configuration development",
     "supabase:seed": "node scripts/generate-supabase-seed.mjs"
@@ -20,6 +21,7 @@
     "@angular/platform-browser-dynamic": "15.2.10",
     "@angular/router": "15.2.10",
     "@supabase/supabase-js": "^2.110.6",
+    "decimal.js": "^10.6.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "rxjs": "7.8.1",
@@ -33,6 +35,7 @@
     "@types/node": "^18.19.130",
     "angular-cli-ghpages": "^1.0.7",
     "caniuse-lite": "^1.0.30001777",
-    "typescript": "4.9.5"
+    "typescript": "4.9.5",
+    "vitest": "^0.34.6"
   }
 }

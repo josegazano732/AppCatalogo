@@ -78,7 +78,7 @@
             <p>Precio unitario s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</p>
           </details>
           <p *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
-          <small>{{ getCategoryLabel(product) }}</small>
+          <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
         </div>
       </div>
 
@@ -253,7 +253,7 @@
     </div>
 
     <section class="product-image-modal-details" *ngIf="selectedImagePreviewProduct as product">
-      <small>{{ getCategoryLabel(product) }}</small>
+      <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
       <h2>{{ product.name }}</h2>
 
       <div class="product-image-price-row">

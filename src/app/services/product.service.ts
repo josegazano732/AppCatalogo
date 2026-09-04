@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, catchError, from, map, of, switchMap } from 'rxjs';
+import { Observable, catchError, combineLatest, from, map, of, switchMap } from 'rxjs';
 
 import { Product } from '../models/product.model';
+import { attachPvpReferences } from './pricing-calculator';
 import { SupabaseService } from './supabase.service';
 
 export type PriceCatalogId = 'whatsapp' | 'commerce-pos' | 'distributor-pallet' | 'wholesale' | 'retail' | 'holowaty';
@@ -12,6 +13,7 @@ export interface PriceCatalog {
   description: string;
   route: string;
   priceLabel: string;
+  isPublicSale?: boolean;
 }
 
 export interface ProductPriceUpdate {
@@ -74,10 +76,11 @@ export class ProductService {
     },
     {
       id: 'retail',
-      name: 'Catalogo minorista',
-      description: 'Precios finales del canal minorista.',
+      name: 'PVP - Consumidor Final',
+      description: 'Precios de venta al consumidor final.',
       route: '/catalogo-minorista',
-      priceLabel: 'Precio minorista'
+      priceLabel: 'PVP Consumidor Final',
+      isPublicSale: true
     },
     {
       id: 'holowaty',
@@ -707,19 +710,32 @@ export class ProductService {
   }
 
   getCommercePosProducts(): Observable<Product[]> {
-    return this.getCatalogProducts('commerce-pos');
+    return this.getProductsWithPvpReference('commerce-pos');
   }
 
   getDistributorCatalogProducts(): Observable<Product[]> {
-    return this.getCatalogProducts('distributor-pallet');
+    return this.getProductsWithPvpReference('distributor-pallet');
   }
 
   getWholesaleCatalogProducts(): Observable<Product[]> {
-    return this.getCatalogProducts('wholesale');
+    return this.getProductsWithPvpReference('wholesale');
   }
 
   getRetailCatalogProducts(): Observable<Product[]> {
     return this.getCatalogProducts('retail');
+  }
+
+  getPublicSaleCatalogProducts(): Observable<Product[]> {
+    const fallbackCatalog = this.priceCatalogs.find((catalog: PriceCatalog) => catalog.isPublicSale);
+    if (!fallbackCatalog) {
+      throw new Error('No hay un catalogo definido como venta al publico.');
+    }
+
+    return from(this.supabase.getPublicSaleCatalogId()).pipe(
+      map((catalogId: string | null) => catalogId && this.isPriceCatalogId(catalogId) ? catalogId : fallbackCatalog.id),
+      catchError(() => of(fallbackCatalog.id)),
+      switchMap((catalogId: PriceCatalogId) => this.getCatalogProducts(catalogId))
+    );
   }
 
   getHolowatyCatalogProducts(): Observable<Product[]> {
@@ -732,6 +748,15 @@ export class ProductService {
 
   getPriceCatalogProducts(catalogId: PriceCatalogId): Observable<Product[]> {
     return this.getCatalogProducts(catalogId);
+  }
+
+  private getProductsWithPvpReference(catalogId: PriceCatalogId): Observable<Product[]> {
+    return combineLatest([
+      this.getCatalogProducts(catalogId),
+      this.getPublicSaleCatalogProducts()
+    ]).pipe(
+      map(([products, publicSaleProducts]: [Product[], Product[]]) => attachPvpReferences(products, publicSaleProducts))
+    );
   }
 
   saveCatalogPrices(catalogId: PriceCatalogId, updates: ProductPriceUpdate[]): Observable<Product[]> {
@@ -863,6 +888,10 @@ export class ProductService {
     } catch {
       return {};
     }
+  }
+
+  private isPriceCatalogId(value: string): value is PriceCatalogId {
+    return this.priceCatalogs.some((catalog: PriceCatalog) => catalog.id === value);
   }
 
   private cloneProducts(products: Product[]): Product[] {

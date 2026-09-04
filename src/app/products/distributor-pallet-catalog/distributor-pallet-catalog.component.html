@@ -234,7 +234,7 @@
           <p class="sale-suggested">
             Precio neto unidad (sin IVA): {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}
           </p>
-          <small>{{ getCategoryLabel(product) }}</small>
+          <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
         </div>
       </div>
 

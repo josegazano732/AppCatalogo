@@ -7,6 +7,10 @@ const sourcePath = path.join(workspaceRoot, 'src', 'app', 'services', 'product.s
 const outputPath = path.join(workspaceRoot, 'supabase', 'migrations', '202607150002_catalog_seed.sql');
 const schemaPath = path.join(workspaceRoot, 'supabase', 'migrations', '202607150001_catalog_schema.sql');
 const adminAllowlistPath = path.join(workspaceRoot, 'supabase', 'migrations', '202607150003_admin_allowlist.sql');
+const commercialPricingPath = path.join(workspaceRoot, 'supabase', 'migrations', '202609030001_commercial_pricing.sql');
+const scalablePricingPath = path.join(workspaceRoot, 'supabase', 'migrations', '202609040002_scalable_product_pricing.sql');
+const commercialKeyRepairPath = path.join(workspaceRoot, 'supabase', 'migrations', '202609040003_repair_commercial_keys.sql');
+const productIdentitySyncPath = path.join(workspaceRoot, 'supabase', 'migrations', '202609040004_sync_product_identity_from_pvp.sql');
 const setupPath = path.join(workspaceRoot, 'supabase', 'setup.sql');
 const sourceText = fs.readFileSync(sourcePath, 'utf8');
 const sourceFile = ts.createSourceFile(sourcePath, sourceText, ts.ScriptTarget.Latest, true);
@@ -121,6 +125,7 @@ Object.values(catalogs).flat().forEach((product) => {
       image = null,
       unit_of_measure = null,
       sku = null,
+      commercial_key = null,
       brand = null,
       stock = 0,
       price: _price,
@@ -137,6 +142,7 @@ Object.values(catalogs).flat().forEach((product) => {
       image,
       unit_of_measure,
       sku,
+      commercial_key,
       brand,
       stock,
       metadata
@@ -170,6 +176,7 @@ with seed_products as (
     image text,
     unit_of_measure text,
     sku text,
+    commercial_key text,
     brand text,
     stock numeric,
     metadata jsonb
@@ -183,6 +190,7 @@ insert into public.products (
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -195,6 +203,7 @@ select
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -206,6 +215,7 @@ on conflict (id) do update set
   image = excluded.image,
   unit_of_measure = excluded.unit_of_measure,
   sku = excluded.sku,
+  commercial_key = coalesce(excluded.commercial_key, public.products.commercial_key),
   brand = excluded.brand,
   stock = excluded.stock,
   metadata = excluded.metadata;
@@ -245,6 +255,10 @@ fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, sql, 'utf8');
 const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 const adminAllowlistSql = fs.readFileSync(adminAllowlistPath, 'utf8');
-fs.writeFileSync(setupPath, `${schemaSql.trim()}\n\n${sql.trim()}\n\n${adminAllowlistSql}`, 'utf8');
+const commercialPricingSql = fs.readFileSync(commercialPricingPath, 'utf8');
+const scalablePricingSql = fs.readFileSync(scalablePricingPath, 'utf8');
+const commercialKeyRepairSql = fs.readFileSync(commercialKeyRepairPath, 'utf8');
+const productIdentitySyncSql = fs.readFileSync(productIdentitySyncPath, 'utf8');
+fs.writeFileSync(setupPath, `${schemaSql.trim()}\n\n${sql.trim()}\n\n${adminAllowlistSql.trim()}\n\n${commercialPricingSql.trim()}\n\n${scalablePricingSql.trim()}\n\n${commercialKeyRepairSql.trim()}\n\n${productIdentitySyncSql}`, 'utf8');
 console.log(`Generated ${path.relative(workspaceRoot, outputPath)} with ${productMap.size} products and ${prices.length} catalog prices.`);
 console.log(`Generated ${path.relative(workspaceRoot, setupPath)} for one-step installation.`);

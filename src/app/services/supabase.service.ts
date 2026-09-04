@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { environment } from '../../environments/environment';
 import { Product } from '../models/product.model';
+import type { PriceCalculationInput, PricingRule } from '../models/pricing.model';
 
 export interface RemotePriceUpdate {
   productId: string;
@@ -32,6 +33,7 @@ export interface CatalogProductUpsert {
   image?: string;
   unitOfMeasure?: string;
   sku?: string;
+  commercialKey?: string;
   brand?: string;
   stock: number;
   price: number;
@@ -45,11 +47,36 @@ export class SupabaseService {
   private readonly pdfReferenceStorageKey = 'app-catalogo-pdf-references-v1';
   private readonly productImagesBucket = 'product-images';
 
+  async getPublicSaleCatalogId(): Promise<string | null> {
+    const client = await this.getClient();
+    const { data, error } = await client
+      .from('catalogs')
+      .select('id')
+      .eq('is_public_sale', true)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    return data?.['id'] ? String(data['id']) : null;
+  }
+
+  async setPublicSaleCatalog(catalogId: string): Promise<void> {
+    const client = await this.getClient();
+    const { error } = await client.rpc('set_public_sale_catalog', { target_catalog_id: catalogId });
+
+    if (error) {
+      throw error;
+    }
+  }
+
   async getCatalogProducts(catalogId: string): Promise<Product[]> {
     const client = await this.getClient();
     const { data, error } = await client
       .from('catalog_prices')
-      .select('product_id, price, sort_order, products(id, name, description, category_name, image, unit_of_measure, sku, brand, stock, metadata)')
+      .select('product_id, price, sort_order, products(id, name, description, category_name, image, unit_of_measure, sku, commercial_key, brand, stock, metadata)')
       .eq('catalog_id', catalogId)
       .eq('is_active', true)
       .order('sort_order', { ascending: true })
@@ -273,6 +300,70 @@ export class SupabaseService {
       .select('id', { head: true, count: 'exact' });
 
     return !error;
+  }
+
+  async getPricingRules(): Promise<Record<string, unknown>[]> {
+    const client = await this.getClient();
+    const { data, error } = await client
+      .from('pricing_rules')
+      .select('id, catalog_id, sales_channel_id, target_margin_percent, tax_rate_percent, commercial_discount_percent, bonus_percent, maximum_discount_percent, minimum_price, minimum_pvp, maximum_pvp, payment_terms, minimum_volume, rounding_enabled, rounding_endings')
+      .eq('is_active', true)
+      .order('catalog_id');
+
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []) as Record<string, unknown>[];
+  }
+
+  async savePricingRule(rule: PricingRule): Promise<void> {
+    const client = await this.getClient();
+    const { data: sessionData } = await client.auth.getSession();
+    if (!sessionData.session) {
+      throw new Error('Se requiere una sesion administrativa para guardar reglas de pricing.');
+    }
+
+    const { error } = await client.from('pricing_rules').upsert({
+      catalog_id: rule.catalogId,
+      sales_channel_id: rule.salesChannelId,
+      target_margin_percent: rule.targetMarginPercent,
+      tax_rate_percent: rule.taxRatePercent,
+      commercial_discount_percent: rule.commercialDiscountPercent,
+      bonus_percent: rule.bonusPercent,
+      maximum_discount_percent: rule.maximumDiscountPercent,
+      minimum_price: rule.minimumPrice,
+      minimum_pvp: rule.minimumPvp,
+      maximum_pvp: rule.maximumPvp,
+      payment_terms: rule.paymentTerms,
+      minimum_volume: rule.minimumVolume,
+      rounding_enabled: rule.rounding.enabled,
+      rounding_endings: rule.rounding.endings,
+      is_active: true
+    }, { onConflict: 'catalog_id' });
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  async calculateCommercialPrice(input: PriceCalculationInput): Promise<Record<string, unknown>> {
+    const client = await this.getClient();
+    const { data, error } = await client.rpc('calculate_commercial_price', {
+      p_pvp_final: input.pvpFinal,
+      p_tax_rate_percent: input.taxRatePercent,
+      p_target_margin_percent: input.targetMarginPercent,
+      p_list_price_net: input.listPriceNet ?? null,
+      p_discount_percent: input.commercialDiscountPercent ?? 0,
+      p_bonus_percent: input.bonusPercent ?? 0,
+      p_amate_internal_cost: input.amateInternalCost ?? null
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? {}) as Record<string, unknown>;
   }
 
   async getCatalogPdfReferences(catalogId: string): Promise<CatalogPdfDocument[]> {
@@ -592,6 +683,7 @@ export class SupabaseService {
       image: product.image ? String(product.image) : undefined,
       unit_of_measure: product.unit_of_measure ? String(product.unit_of_measure) : undefined,
       sku: product.sku ? String(product.sku) : undefined,
+      commercial_key: product.commercial_key ? String(product.commercial_key) : undefined,
       brand: product.brand ? String(product.brand) : undefined,
       pallet_units: this.parseOptionalNumber(metadata['pallet_units']),
       price_per_kilo: this.parseOptionalNumber(metadata['price_per_kilo']),
@@ -642,6 +734,7 @@ export class SupabaseService {
       image: product.image ?? null,
       unit_of_measure: product.unitOfMeasure ?? null,
       sku: product.sku ?? null,
+      commercial_key: product.commercialKey ?? null,
       brand: product.brand ?? null,
       stock: product.stock,
       metadata

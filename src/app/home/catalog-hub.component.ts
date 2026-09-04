@@ -35,10 +35,10 @@ export class CatalogHubComponent implements OnInit {
     },
     {
       id: 'retail',
-      title: 'Catalogo Consumidor Final',
-      subtitle: 'ANTES: CATALOGO - MINORISTA',
+      title: 'PVP - Consumidor Final',
+      subtitle: 'PVP CONSUMIDOR FINAL',
       route: '/catalogo-minorista',
-      description: 'Catalogo final para consumo individual con presentacion clara.'
+      description: 'Precios de venta al consumidor final.'
     }
   ];
 

@@ -1,6 +1,10 @@
 import { Component, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 
 import { Product } from '../../models/product.model';
+import { PricingRule } from '../../models/pricing.model';
+import { calculateExistingMarginPercent, calculatePrice, DEFAULT_SCENARIO_MARGINS, getCommercialProductKey, getCommercialProductKeys, resolveCommercialProductKey } from '../../services/pricing-calculator';
+import { PricingService } from '../../services/pricing.service';
 import {
   PriceCatalog,
   PriceCatalogId,
@@ -18,10 +22,23 @@ interface ProductFormState {
   categoryName: string;
   unitOfMeasure: string;
   sku: string;
+  commercialKey: string;
   brand: string;
   stock: string;
   price: string;
   imageUrl: string;
+}
+
+interface ProductPricingRow {
+  product: Product;
+  retailProduct: Product | null;
+  pvpFinal: number | null;
+  currentCatalogPrice: number;
+  currentUnitPrice: number;
+  currentMarginPercent: number | null;
+  targetMarginPercent: number;
+  proposedUnitPrice: number | null;
+  proposedCatalogPrice: number | null;
 }
 
 @Component({
@@ -31,6 +48,7 @@ interface ProductFormState {
 })
 export class PriceAdminComponent implements OnInit {
   readonly catalogs: PriceCatalog[];
+  readonly pricingMargins = [...DEFAULT_SCENARIO_MARGINS];
 
   selectedCatalogId: PriceCatalogId = 'whatsapp';
   products: Product[] = [];
@@ -65,12 +83,20 @@ export class PriceAdminComponent implements OnInit {
   selectedProductImageFile: File | null = null;
   selectedProductImageName = '';
   productForm: ProductFormState = this.createEmptyProductForm();
+  pricingRule: PricingRule = this.createDefaultPricingRule();
+  pricingRows: ProductPricingRow[] = [];
+  pricingBulkMargin = 25;
+  isCalculatingPrice = false;
+  isSavingPricingRule = false;
+  publicSaleCatalogId: PriceCatalogId = 'retail';
+  isSavingPublicSaleCatalog = false;
 
   private originalPrices: Record<string, number> = {};
 
   constructor(
     private readonly productService: ProductService,
-    private readonly supabase: SupabaseService
+    private readonly supabase: SupabaseService,
+    private readonly pricingService: PricingService
   ) {
     this.catalogs = this.productService.getPriceCatalogs();
   }
@@ -93,6 +119,38 @@ export class PriceAdminComponent implements OnInit {
 
   get isEditingProduct(): boolean {
     return Boolean(this.editingProductId);
+  }
+
+  get supportsCommercialPricing(): boolean {
+    return ['wholesale', 'distributor-pallet', 'commerce-pos'].includes(this.selectedCatalogId);
+  }
+
+  get isSelectedPublicSaleCatalog(): boolean {
+    return this.selectedCatalogId === this.publicSaleCatalogId;
+  }
+
+  async setSelectedAsPublicSaleCatalog(): Promise<void> {
+    if (this.isSelectedPublicSaleCatalog || this.isSavingPublicSaleCatalog) {
+      return;
+    }
+
+    if (!window.confirm(`¿Usar "${this.selectedCatalog.name}" como fuente de PVP Consumidor Final?`)) {
+      return;
+    }
+
+    this.isSavingPublicSaleCatalog = true;
+    this.clearFeedback();
+
+    try {
+      await this.supabase.setPublicSaleCatalog(this.selectedCatalogId);
+      this.publicSaleCatalogId = this.selectedCatalogId;
+      await this.initializeCommercialPricing();
+      this.showFeedback(`${this.selectedCatalog.name} ahora es la fuente de PVP Consumidor Final.`, 'success');
+    } catch {
+      this.showFeedback('No se pudo cambiar la lista de PVP. Ejecuta la migracion de pricing escalable.', 'error');
+    } finally {
+      this.isSavingPublicSaleCatalog = false;
+    }
   }
 
   async submitAuth(): Promise<void> {
@@ -179,6 +237,82 @@ export class PriceAdminComponent implements OnInit {
   updatePriceDraft(product: Product, value: string | number | null): void {
     this.priceDrafts[product.id] = String(value ?? '');
     this.clearFeedback();
+  }
+
+  calculateAllCommercialPrices(): void {
+    this.isCalculatingPrice = true;
+    this.clearFeedback();
+
+    try {
+      this.pricingRows.forEach((row: ProductPricingRow) => this.calculatePricingRow(row));
+    } catch (error: unknown) {
+      this.showFeedback(error instanceof Error ? error.message : 'No se pudo calcular el precio.', 'error');
+    } finally {
+      this.isCalculatingPrice = false;
+    }
+  }
+
+  applyBulkPricingMargin(): void {
+    if (!Number.isFinite(this.pricingBulkMargin) || this.pricingBulkMargin < 0 || this.pricingBulkMargin >= 100) {
+      this.showFeedback('El margen general debe estar entre 0 y menos de 100.', 'error');
+      return;
+    }
+
+    this.pricingRule.targetMarginPercent = this.pricingBulkMargin;
+    this.pricingRows.forEach((row: ProductPricingRow) => {
+      row.targetMarginPercent = this.pricingBulkMargin;
+      this.calculatePricingRow(row);
+    });
+    this.showFeedback(`Se preparo toda la lista con ${this.formatPercent(this.pricingBulkMargin)} de margen. Revisa los precios antes de aplicarlos.`, 'success');
+  }
+
+  onPricingPvpChange(row: ProductPricingRow): void {
+    this.updateCurrentMargin(row);
+    this.calculatePricingRow(row);
+  }
+
+  onTargetMarginChange(row: ProductPricingRow): void {
+    this.calculatePricingRow(row);
+  }
+
+  async savePricingMargin(): Promise<void> {
+    this.isSavingPricingRule = true;
+    this.clearFeedback();
+
+    try {
+      await this.pricingService.saveRule(this.pricingRule);
+      this.showFeedback(`Margen de ${this.formatPercent(this.pricingRule.targetMarginPercent)} guardado para ${this.selectedCatalog.name}.`, 'success');
+    } catch {
+      this.showFeedback('El margen quedo guardado localmente. Ejecuta la migracion de pricing para sincronizarlo con Supabase.', 'error');
+    } finally {
+      this.isSavingPricingRule = false;
+    }
+  }
+
+  applyCalculatedPrice(row: ProductPricingRow): void {
+    if (row.proposedCatalogPrice === null) {
+      this.showFeedback(`Define un PVP valido para ${row.product.name}.`, 'error');
+      return;
+    }
+
+    this.updatePriceDraft(row.product, this.formatEditablePrice(row.proposedCatalogPrice));
+    this.showFeedback(`Se aplico ${this.formatPrice(row.proposedCatalogPrice)} a ${row.product.name}. Usa Guardar cambios para confirmar.`, 'success');
+  }
+
+  applyAllCalculatedPrices(): void {
+    const applicableRows = this.pricingRows.filter((row: ProductPricingRow) => row.proposedCatalogPrice !== null);
+    applicableRows.forEach((row: ProductPricingRow) => {
+      this.priceDrafts[row.product.id] = this.formatEditablePrice(row.proposedCatalogPrice as number);
+    });
+    this.showFeedback(`Se aplicaron ${applicableRows.length} precios calculados. Revisa la tabla inferior y usa Guardar cambios para confirmar.`, 'success');
+  }
+
+  formatPercent(value: number): string {
+    return `${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(value)}%`;
+  }
+
+  formatOptionalPercent(value: number | null): string {
+    return value === null ? 'Sin PVP' : this.formatPercent(value);
   }
 
   applyPercentage(): void {
@@ -271,6 +405,10 @@ export class PriceAdminComponent implements OnInit {
     }).format(value);
   }
 
+  formatOptionalPrice(value: number | null): string {
+    return value === null ? '-' : this.formatPrice(value);
+  }
+
   trackProduct(_index: number, product: Product): string {
     return product.id;
   }
@@ -284,6 +422,7 @@ export class PriceAdminComponent implements OnInit {
       categoryName: product.category_name || product.category || '',
       unitOfMeasure: product.unit_of_measure ?? '',
       sku: product.sku ?? '',
+      commercialKey: product.commercial_key ?? this.getPricingProductKey(product),
       brand: product.brand ?? '',
       stock: String(product.stock ?? 0),
       price: this.formatEditablePrice(this.getProductPrice(product)),
@@ -379,6 +518,7 @@ export class PriceAdminComponent implements OnInit {
         categoryName,
         unitOfMeasure: this.productForm.unitOfMeasure.trim(),
         sku: this.productForm.sku.trim(),
+        commercialKey: this.normalizeCommercialKey(this.productForm.commercialKey),
         brand: this.productForm.brand.trim(),
         stock: Number(stock.toFixed(2)),
         price: Number(price.toFixed(2)),
@@ -598,10 +738,22 @@ export class PriceAdminComponent implements OnInit {
 
       this.accessState = 'admin';
       this.authMessage = '';
+      await this.loadPublicSaleCatalogId();
       this.loadCatalog();
     } catch {
       this.accessState = 'signed-out';
       this.showAuthMessage('No se pudo verificar el acceso con Supabase.', 'error');
+    }
+  }
+
+  private async loadPublicSaleCatalogId(): Promise<void> {
+    try {
+      const catalogId = await this.supabase.getPublicSaleCatalogId();
+      if (catalogId && this.catalogs.some((catalog: PriceCatalog) => catalog.id === catalogId)) {
+        this.publicSaleCatalogId = catalogId as PriceCatalogId;
+      }
+    } catch {
+      this.publicSaleCatalogId = 'retail';
     }
   }
 
@@ -622,6 +774,135 @@ export class PriceAdminComponent implements OnInit {
     if (this.editingProductId && !products.some((product: Product) => product.id === this.editingProductId)) {
       this.cancelProductForm();
     }
+
+    void this.initializeCommercialPricing();
+  }
+
+  private async initializeCommercialPricing(): Promise<void> {
+    this.pricingRows = [];
+
+    if (!this.supportsCommercialPricing) {
+      return;
+    }
+
+    try {
+      const [rules, publicSaleProducts] = await Promise.all([
+        this.pricingService.getRules(),
+        firstValueFrom(this.productService.getPublicSaleCatalogProducts())
+      ]);
+      this.pricingRule = this.clonePricingRule(
+        rules.find((rule: PricingRule) => rule.catalogId === this.selectedCatalogId)
+        ?? this.createDefaultPricingRule()
+      );
+      this.pricingBulkMargin = this.pricingRule.targetMarginPercent;
+      const publicSaleByKey = new Map<string, Product>();
+      publicSaleProducts.forEach((product: Product) => {
+        this.getPricingProductKeys(product).forEach((key: string) => publicSaleByKey.set(key, product));
+      });
+
+      this.pricingRows = this.products.map((product: Product) => {
+        const retailProduct = this.getPricingProductKeys(product)
+          .map((key: string) => publicSaleByKey.get(key))
+          .find((candidate: Product | undefined) => candidate !== undefined) ?? null;
+        const currentCatalogPrice = this.getProductPrice(product);
+        const currentUnitPrice = currentCatalogPrice / this.getPricingItemUnits(product);
+        const row: ProductPricingRow = {
+          product,
+          retailProduct,
+          pvpFinal: retailProduct ? this.getPublicSaleProductPrice(retailProduct) : null,
+          currentCatalogPrice,
+          currentUnitPrice,
+          currentMarginPercent: null,
+          targetMarginPercent: this.pricingRule.targetMarginPercent,
+          proposedUnitPrice: null,
+          proposedCatalogPrice: null
+        };
+        this.updateCurrentMargin(row);
+        if (row.currentMarginPercent !== null) {
+          row.targetMarginPercent = row.currentMarginPercent;
+        }
+        this.calculatePricingRow(row);
+        return row;
+      });
+    } catch {
+      this.pricingRows = [];
+      this.showFeedback('No se pudo relacionar esta lista con los PVP de Consumidor Final.', 'error');
+    }
+  }
+
+  private calculatePricingRow(row: ProductPricingRow): void {
+    if (row.pvpFinal === null || row.pvpFinal <= 0 || row.targetMarginPercent < 0 || row.targetMarginPercent >= 100) {
+      row.proposedUnitPrice = null;
+      row.proposedCatalogPrice = null;
+      return;
+    }
+
+    const calculation = calculatePrice({
+      pvpFinal: row.pvpFinal,
+      taxRatePercent: this.pricingRule.taxRatePercent,
+      targetMarginPercent: row.targetMarginPercent
+    });
+    row.proposedUnitPrice = calculation.invoicedPrice;
+    row.proposedCatalogPrice = Number((calculation.invoicedPrice * this.getPricingItemUnits(row.product)).toFixed(2));
+  }
+
+  private updateCurrentMargin(row: ProductPricingRow): void {
+    row.currentMarginPercent = row.pvpFinal !== null && row.pvpFinal > 0
+      ? calculateExistingMarginPercent(row.pvpFinal, row.currentUnitPrice)
+      : null;
+  }
+
+  private getPricingItemUnits(product: Product): number {
+    if (!product || product.unit_of_measure?.toLowerCase() !== 'pack') {
+      return 1;
+    }
+
+    const leadingUnits = product.name.match(/(\d+)\s*x/i)?.[1];
+    const trailingUnits = product.name.match(/x\s*(\d+)/i)?.[1];
+    const parsedUnits = Number(leadingUnits ?? trailingUnits ?? 1);
+    return Number.isFinite(parsedUnits) && parsedUnits > 0 ? parsedUnits : 1;
+  }
+
+  private getPublicSaleProductPrice(product: Product): number {
+    return product.price;
+  }
+
+  private getPricingProductKey(product: Product): string {
+    return resolveCommercialProductKey(product.name, this.getCategoryLabel(product), product.commercial_key);
+  }
+
+  private getPricingProductKeys(product: Product): string[] {
+    return getCommercialProductKeys(product.name, this.getCategoryLabel(product), product.commercial_key);
+  }
+
+  private normalizeCommercialKey(value: string | undefined): string {
+    return (value ?? '').trim().toLowerCase().replace(/\s+/g, '-');
+  }
+
+  private createDefaultPricingRule(): PricingRule {
+    const catalogId = this.selectedCatalogId === 'distributor-pallet' || this.selectedCatalogId === 'commerce-pos'
+      ? this.selectedCatalogId
+      : 'wholesale';
+
+    return {
+      catalogId,
+      salesChannelId: catalogId === 'distributor-pallet' ? 'distributor' : catalogId === 'commerce-pos' ? 'self-service' : 'wholesaler',
+      targetMarginPercent: catalogId === 'distributor-pallet' ? 15 : catalogId === 'commerce-pos' ? 25 : 20,
+      taxRatePercent: 21,
+      commercialDiscountPercent: 0,
+      bonusPercent: 0,
+      maximumDiscountPercent: 40,
+      minimumPrice: null,
+      minimumPvp: null,
+      maximumPvp: null,
+      paymentTerms: 'Contado',
+      minimumVolume: 1,
+      rounding: { enabled: false, endings: [] }
+    };
+  }
+
+  private clonePricingRule(rule: PricingRule): PricingRule {
+    return { ...rule, rounding: { ...rule.rounding, endings: [...rule.rounding.endings] } };
   }
 
   private getProductPrice(product: Product): number {
@@ -724,6 +1005,7 @@ export class PriceAdminComponent implements OnInit {
       categoryName: '',
       unitOfMeasure: 'unidad',
       sku: '',
+      commercialKey: '',
       brand: '',
       stock: '0',
       price: '',

@@ -97,11 +97,107 @@
           <h2>{{ selectedCatalog.name }}</h2>
           <p>{{ selectedCatalog.description }}</p>
         </div>
-        <div class="product-total">
-          <strong>{{ products.length }}</strong>
-          <span>productos</span>
+        <div class="catalog-heading-actions">
+          <span class="public-sale-badge" *ngIf="isSelectedPublicSaleCatalog">
+            <i class="fas fa-store" aria-hidden="true"></i>
+            Fuente PVP
+          </span>
+          <button
+            *ngIf="!isSelectedPublicSaleCatalog"
+            type="button"
+            class="set-public-sale-button"
+            (click)="setSelectedAsPublicSaleCatalog()"
+            [disabled]="isSavingPublicSaleCatalog"
+          >
+            <i class="fas fa-store" aria-hidden="true"></i>
+            {{ isSavingPublicSaleCatalog ? 'Configurando...' : 'Usar como PVP' }}
+          </button>
+          <div class="product-total">
+            <strong>{{ products.length }}</strong>
+            <span>productos</span>
+          </div>
         </div>
       </div>
+
+      <section class="pricing-simple" *ngIf="supportsCommercialPricing" aria-label="Calculo comercial desde PVP">
+        <div class="pricing-simple-heading">
+          <div>
+            <span class="section-kicker">Margenes actuales y objetivo</span>
+            <h3>Productos de {{ selectedCatalog.name }}</h3>
+          </div>
+          <span class="pricing-list-badge">{{ selectedCatalog.name }}</span>
+        </div>
+
+        <div class="pricing-list-controls">
+          <label>
+            <span>IVA de la lista</span>
+            <div class="pricing-input-suffix"><input type="number" min="0" max="99.99" step="0.01" [(ngModel)]="pricingRule.taxRatePercent" (ngModelChange)="calculateAllCommercialPrices()"><b>%</b></div>
+          </label>
+          <label>
+            <span>Margen para toda la lista</span>
+            <div class="pricing-input-suffix"><input type="number" min="0" max="99.99" step="0.01" [(ngModel)]="pricingBulkMargin"><b>%</b></div>
+          </label>
+          <button type="button" class="pricing-calculate-button" (click)="applyBulkPricingMargin()">
+            <i class="fas fa-percentage" aria-hidden="true"></i>
+            Asignar a todos
+          </button>
+          <button type="button" class="pricing-margin-button" (click)="savePricingMargin()" [disabled]="isSavingPricingRule">
+            <i class="fas fa-save" aria-hidden="true"></i>
+            Guardar margen de lista
+          </button>
+        </div>
+
+        <p class="pricing-simple-explanation">
+          El margen actual compara el precio unitario vigente de esta lista contra el PVP Consumidor Final, ambos con IVA.
+        </p>
+
+        <div class="pricing-products-wrap">
+          <table class="pricing-products-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>PVP Consumidor Final</th>
+                <th>Precio actual lista</th>
+                <th>Margen actual</th>
+                <th>Margen objetivo</th>
+                <th>Precio propuesto</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of pricingRows" [class.unmatched]="!row.retailProduct">
+                <td class="pricing-product-name">
+                  <strong>{{ row.product.name }}</strong>
+                  <small *ngIf="row.retailProduct">Referencia: {{ row.retailProduct.name }}</small>
+                  <small *ngIf="!row.retailProduct">Sin coincidencia en PVP Consumidor Final</small>
+                </td>
+                <td>
+                  <div class="pricing-money-field"><span>$</span><input type="number" min="0.01" step="0.01" [(ngModel)]="row.pvpFinal" (ngModelChange)="onPricingPvpChange(row)"></div>
+                </td>
+                <td>
+                  <strong>{{ formatPrice(row.currentCatalogPrice) }}</strong>
+                  <small *ngIf="row.currentCatalogPrice !== row.currentUnitPrice">{{ formatPrice(row.currentUnitPrice) }} por unidad</small>
+                </td>
+                <td><span class="current-margin" [class.negative]="row.currentMarginPercent !== null && row.currentMarginPercent < 0">{{ formatOptionalPercent(row.currentMarginPercent) }}</span></td>
+                <td><div class="pricing-percent-field"><input type="number" min="0" max="99.99" step="0.01" [(ngModel)]="row.targetMarginPercent" (ngModelChange)="onTargetMarginChange(row)"><span>%</span></div></td>
+                <td>
+                  <strong>{{ formatOptionalPrice(row.proposedCatalogPrice) }}</strong>
+                  <small *ngIf="row.proposedUnitPrice !== null && row.proposedCatalogPrice !== row.proposedUnitPrice">{{ formatOptionalPrice(row.proposedUnitPrice) }} por unidad</small>
+                </td>
+                <td><button type="button" class="pricing-row-apply" title="Aplicar precio" (click)="applyCalculatedPrice(row)" [disabled]="row.proposedCatalogPrice === null"><i class="fas fa-check" aria-hidden="true"></i></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pricing-simple-actions">
+          <span>{{ pricingRows.length }} productos en la lista</span>
+          <button type="button" class="pricing-apply-button" (click)="applyAllCalculatedPrices()" [disabled]="pricingRows.length === 0">
+            <i class="fas fa-check-double" aria-hidden="true"></i>
+            Aplicar todos los precios propuestos
+          </button>
+        </div>
+      </section>
 
       <section class="admin-toolbar" aria-label="Herramientas de precios">
         <label class="search-field">
@@ -174,6 +270,11 @@
           <label>
             <span>SKU</span>
             <input type="text" [(ngModel)]="productForm.sku" name="productSku" placeholder="Opcional" />
+          </label>
+
+          <label>
+            <span>Clave comercial</span>
+            <input type="text" [(ngModel)]="productForm.commercialKey" name="productCommercialKey" placeholder="Ej: don-julian|500g|clasica" />
           </label>
 
           <label>

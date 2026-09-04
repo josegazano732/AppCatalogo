@@ -6,6 +6,7 @@ create table if not exists public.catalogs (
   description text not null default '',
   route text not null,
   price_label text not null,
+  is_public_sale boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -19,12 +20,21 @@ create table if not exists public.products (
   image text,
   unit_of_measure text,
   sku text,
+  commercial_key text,
   brand text,
   stock numeric not null default 0 check (stock >= 0),
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists products_commercial_key_idx
+  on public.products (commercial_key)
+  where commercial_key is not null;
+
+create unique index if not exists catalogs_one_public_sale_idx
+  on public.catalogs (is_public_sale)
+  where is_public_sale;
 
 create table if not exists public.catalog_prices (
   catalog_id text not null references public.catalogs(id) on update cascade on delete cascade,
@@ -50,15 +60,6 @@ create table if not exists public.price_history (
   new_price numeric(14, 2) not null,
   changed_by uuid references auth.users(id) on delete set null,
   changed_at timestamptz not null default now()
-);
-
-create table if not exists public.catalog_documents (
-  catalog_id text primary key references public.catalogs(id) on update cascade on delete cascade,
-  file_name text not null,
-  file_path text,
-  public_url text not null,
-  mime_type text not null default 'application/pdf',
-  updated_at timestamptz not null default now()
 );
 
 create index if not exists catalog_prices_catalog_order_idx
@@ -146,7 +147,6 @@ alter table public.products enable row level security;
 alter table public.catalog_prices enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.price_history enable row level security;
-alter table public.catalog_documents enable row level security;
 
 drop policy if exists "Public can read active catalogs" on public.catalogs;
 create policy "Public can read active catalogs"
@@ -199,40 +199,26 @@ on public.price_history for select
 to authenticated
 using (public.is_catalog_admin());
 
-drop policy if exists "Public can read catalog documents" on public.catalog_documents;
-create policy "Public can read catalog documents"
-on public.catalog_documents for select
-to anon, authenticated
-using (true);
-
-drop policy if exists "Admins manage catalog documents" on public.catalog_documents;
-create policy "Admins manage catalog documents"
-on public.catalog_documents for all
-to authenticated
-using (public.is_catalog_admin())
-with check (public.is_catalog_admin());
-
 grant usage on schema public to anon, authenticated;
 grant select on public.catalogs, public.products, public.catalog_prices to anon, authenticated;
 grant select, insert, update, delete on public.catalogs, public.products, public.catalog_prices to authenticated;
 grant select on public.admin_users, public.price_history to authenticated;
-grant select on public.catalog_documents to anon, authenticated;
-grant select, insert, update, delete on public.catalog_documents to authenticated;
 grant usage, select on sequence public.price_history_id_seq to authenticated;
 
-insert into public.catalogs (id, name, description, route, price_label)
+insert into public.catalogs (id, name, description, route, price_label, is_public_sale)
 values
-  ('whatsapp', 'Catalogo WhatsApp', 'Lista principal de packs para pedidos por WhatsApp.', '/', 'Precio por pack'),
-  ('commerce-pos', 'Comercios y puntos de venta', 'Packs destinados a comercios y puntos de venta.', '/catalogo-comercios-punto-de-ventas', 'Precio por pack'),
-  ('distributor-pallet', 'Distribuidora por pallet', 'Precio base por pack usado para calcular cada pallet.', '/catalogo-distribuidora-pallet', 'Precio base por pack'),
-  ('wholesale', 'Catalogo mayorista', 'Lista mayorista por unidad y presentacion.', '/catalogo-mayorista', 'Precio mayorista'),
-  ('retail', 'Catalogo minorista', 'Precios finales del canal minorista.', '/catalogo-minorista', 'Precio minorista'),
-  ('holowaty', 'Lista Holowaty', 'Precio de lista usado para calcular descuentos y netos.', '/holowaty', 'Precio de lista')
+  ('whatsapp', 'Catalogo WhatsApp', 'Lista principal de packs para pedidos por WhatsApp.', '/', 'Precio por pack', false),
+  ('commerce-pos', 'Comercios y puntos de venta', 'Packs destinados a comercios y puntos de venta.', '/catalogo-comercios-punto-de-ventas', 'Precio por pack', false),
+  ('distributor-pallet', 'Distribuidora por pallet', 'Precio base por pack usado para calcular cada pallet.', '/catalogo-distribuidora-pallet', 'Precio base por pack', false),
+  ('wholesale', 'Catalogo mayorista', 'Lista mayorista por unidad y presentacion.', '/catalogo-mayorista', 'Precio mayorista', false),
+  ('retail', 'PVP - Consumidor Final', 'Precios de venta al consumidor final.', '/catalogo-minorista', 'PVP Consumidor Final', true),
+  ('holowaty', 'Lista Holowaty', 'Precio de lista usado para calcular descuentos y netos.', '/holowaty', 'Precio de lista', false)
 on conflict (id) do update set
   name = excluded.name,
   description = excluded.description,
   route = excluded.route,
   price_label = excluded.price_label,
+  is_public_sale = excluded.is_public_sale,
   is_active = true;
 
 commit;
@@ -250,6 +236,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -262,6 +249,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -274,6 +262,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -286,6 +275,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -298,6 +288,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -310,6 +301,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -322,6 +314,7 @@ with seed_products as (
     "image": "assets/products/YM MATEITE PREMIUM.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -334,6 +327,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 101,
     "metadata": {}
@@ -346,6 +340,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -358,6 +353,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -370,6 +366,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -382,6 +379,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -394,6 +392,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -406,6 +405,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -418,6 +418,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -430,6 +431,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -442,6 +444,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -454,6 +457,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -466,6 +470,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -478,6 +483,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -490,6 +496,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -502,6 +509,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -514,6 +522,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -526,6 +535,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -538,6 +548,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -550,6 +561,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -562,6 +574,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -574,6 +587,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -586,6 +600,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -598,6 +613,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -610,6 +626,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -622,6 +639,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -634,6 +652,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -646,6 +665,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -658,6 +678,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -670,6 +691,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -682,6 +704,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -694,6 +717,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -706,6 +730,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -718,6 +743,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -730,6 +756,7 @@ with seed_products as (
     "image": "assets/products/YM MATEITE PREMIUM.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -742,6 +769,7 @@ with seed_products as (
     "image": "assets/products/holowaty/YERUPE Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1001",
+    "commercial_key": null,
     "brand": "YERUPE",
     "stock": 100,
     "metadata": {
@@ -760,6 +788,7 @@ with seed_products as (
     "image": "assets/products/holowaty/YERUPE Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1002",
+    "commercial_key": null,
     "brand": "YERUPE",
     "stock": 100,
     "metadata": {
@@ -778,6 +807,7 @@ with seed_products as (
     "image": "assets/products/holowaty/ALAZAN Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1003",
+    "commercial_key": null,
     "brand": "ALAZAN",
     "stock": 100,
     "metadata": {
@@ -796,6 +826,7 @@ with seed_products as (
     "image": "assets/products/holowaty/ALAZAN Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1004",
+    "commercial_key": null,
     "brand": "ALAZAN",
     "stock": 100,
     "metadata": {
@@ -814,6 +845,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO ROJO Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1005",
+    "commercial_key": null,
     "brand": "SELLO ROJO",
     "stock": 100,
     "metadata": {
@@ -832,6 +864,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO ROJO Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1006",
+    "commercial_key": null,
     "brand": "SELLO ROJO",
     "stock": 100,
     "metadata": {
@@ -850,6 +883,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO NEGRO Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1007",
+    "commercial_key": null,
     "brand": "SELLO NEGRO",
     "stock": 100,
     "metadata": {
@@ -868,6 +902,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO NEGRO Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1008",
+    "commercial_key": null,
     "brand": "SELLO NEGRO",
     "stock": 100,
     "metadata": {
@@ -886,6 +921,7 @@ with seed_products as (
     image text,
     unit_of_measure text,
     sku text,
+    commercial_key text,
     brand text,
     stock numeric,
     metadata jsonb
@@ -899,6 +935,7 @@ insert into public.products (
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -911,6 +948,7 @@ select
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -922,6 +960,7 @@ on conflict (id) do update set
   image = excluded.image,
   unit_of_measure = excluded.unit_of_measure,
   sku = excluded.sku,
+  commercial_key = coalesce(excluded.commercial_key, public.products.commercial_key),
   brand = excluded.brand,
   stock = excluded.stock,
   metadata = excluded.metadata;
@@ -1451,34 +1490,427 @@ commit;
 
 begin;
 
-insert into storage.buckets (id, name, public)
-values ('product-images', 'product-images', true)
-on conflict (id) do update set
-  public = excluded.public;
+create table if not exists public.sales_channels (
+  id text primary key,
+  name text not null,
+  catalog_id text references public.catalogs(id) on update cascade on delete set null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 
-drop policy if exists "Public can read product images" on storage.objects;
-create policy "Public can read product images"
-on storage.objects for select
-to public
-using (bucket_id = 'product-images');
+create table if not exists public.pricing_rules (
+  id bigint generated by default as identity primary key,
+  catalog_id text not null unique references public.catalogs(id) on update cascade on delete cascade,
+  sales_channel_id text not null references public.sales_channels(id) on update cascade,
+  target_margin_percent numeric(7, 4) not null check (target_margin_percent >= 0 and target_margin_percent < 100),
+  tax_rate_percent numeric(7, 4) not null default 21 check (tax_rate_percent >= 0 and tax_rate_percent < 100),
+  commercial_discount_percent numeric(7, 4) not null default 0 check (commercial_discount_percent >= 0 and commercial_discount_percent < 100),
+  bonus_percent numeric(7, 4) not null default 0 check (bonus_percent >= 0 and bonus_percent < 100),
+  maximum_discount_percent numeric(7, 4) not null default 40 check (maximum_discount_percent >= 0 and maximum_discount_percent < 100),
+  minimum_price numeric(14, 2) check (minimum_price is null or minimum_price >= 0),
+  minimum_pvp numeric(14, 2) check (minimum_pvp is null or minimum_pvp > 0),
+  maximum_pvp numeric(14, 2) check (maximum_pvp is null or maximum_pvp > 0),
+  payment_terms text not null default 'Contado',
+  minimum_volume numeric(14, 2) not null default 1 check (minimum_volume > 0),
+  rounding_enabled boolean not null default true,
+  rounding_endings smallint[] not null default array[19, 39, 90, 99]::smallint[],
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (catalog_id in ('wholesale', 'distributor-pallet', 'commerce-pos')),
+  check (maximum_pvp is null or minimum_pvp is null or maximum_pvp >= minimum_pvp),
+  check (commercial_discount_percent <= maximum_discount_percent)
+);
 
-drop policy if exists "Authenticated users can upload product images" on storage.objects;
-create policy "Authenticated users can upload product images"
-on storage.objects for insert
-to authenticated
-with check (bucket_id = 'product-images');
+create table if not exists public.price_calculations (
+  id bigint generated by default as identity primary key,
+  product_id text references public.products(id) on update cascade on delete set null,
+  catalog_id text not null references public.catalogs(id) on update cascade on delete cascade,
+  pricing_rule_id bigint references public.pricing_rules(id) on update cascade on delete set null,
+  pvp_final numeric(14, 2) not null,
+  pvp_net numeric(14, 2) not null,
+  sale_net numeric(14, 2) not null,
+  invoiced_price numeric(14, 2) not null,
+  target_margin_percent numeric(7, 4) not null,
+  retailer_margin_percent numeric(7, 4) not null,
+  retailer_markup_percent numeric(9, 4) not null,
+  amate_internal_cost numeric(14, 2),
+  amate_margin_percent numeric(9, 4),
+  calculation jsonb not null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  check (catalog_id in ('wholesale', 'distributor-pallet', 'commerce-pos'))
+);
 
-drop policy if exists "Authenticated users can update product images" on storage.objects;
-create policy "Authenticated users can update product images"
-on storage.objects for update
-to authenticated
-using (bucket_id = 'product-images')
-with check (bucket_id = 'product-images');
+create index if not exists price_calculations_catalog_created_idx
+  on public.price_calculations (catalog_id, created_at desc);
 
-drop policy if exists "Authenticated users can delete product images" on storage.objects;
-create policy "Authenticated users can delete product images"
-on storage.objects for delete
-to authenticated
-using (bucket_id = 'product-images');
+drop trigger if exists sales_channels_set_updated_at on public.sales_channels;
+create trigger sales_channels_set_updated_at
+before update on public.sales_channels
+for each row execute function public.set_updated_at();
+
+drop trigger if exists pricing_rules_set_updated_at on public.pricing_rules;
+create trigger pricing_rules_set_updated_at
+before update on public.pricing_rules
+for each row execute function public.set_updated_at();
+
+create or replace function public.calculate_commercial_price(
+  p_pvp_final numeric,
+  p_tax_rate_percent numeric,
+  p_target_margin_percent numeric,
+  p_list_price_net numeric default null,
+  p_discount_percent numeric default 0,
+  p_bonus_percent numeric default 0,
+  p_amate_internal_cost numeric default null
+)
+returns jsonb
+language plpgsql
+immutable
+security invoker
+set search_path = public
+as $$
+declare
+  v_pvp_net numeric(14, 2);
+  v_maximum_sale_net numeric(14, 2);
+  v_list_price_net numeric(14, 2);
+  v_sale_net numeric(14, 2);
+  v_b2b_tax numeric(14, 2);
+  v_invoiced_price numeric(14, 2);
+  v_retailer_profit numeric(14, 2);
+  v_retailer_margin numeric(9, 4);
+  v_retailer_markup numeric(9, 4);
+  v_amate_profit numeric(14, 2);
+  v_amate_margin numeric(9, 4);
+begin
+  if p_pvp_final <= 0 then raise exception 'El PVP final debe ser mayor que cero'; end if;
+  if p_tax_rate_percent < 0 or p_tax_rate_percent >= 100 then raise exception 'IVA fuera de rango'; end if;
+  if p_target_margin_percent < 0 or p_target_margin_percent >= 100 then raise exception 'Margen fuera de rango'; end if;
+  if p_discount_percent < 0 or p_discount_percent >= 100 then raise exception 'Descuento fuera de rango'; end if;
+  if p_bonus_percent < 0 or p_bonus_percent >= 100 then raise exception 'Bonificacion fuera de rango'; end if;
+
+  v_pvp_net := round(p_pvp_final / (1 + p_tax_rate_percent / 100), 2);
+  v_maximum_sale_net := round(v_pvp_net * (1 - p_target_margin_percent / 100), 2);
+  v_list_price_net := coalesce(p_list_price_net, v_maximum_sale_net);
+  v_sale_net := round(v_list_price_net * (1 - p_discount_percent / 100) * (1 - p_bonus_percent / 100), 2);
+  v_b2b_tax := round(v_sale_net * p_tax_rate_percent / 100, 2);
+  v_invoiced_price := v_sale_net + v_b2b_tax;
+  v_retailer_profit := v_pvp_net - v_sale_net;
+  v_retailer_margin := round(v_retailer_profit / nullif(v_pvp_net, 0) * 100, 4);
+  v_retailer_markup := round(v_retailer_profit / nullif(v_sale_net, 0) * 100, 4);
+  v_amate_profit := case when p_amate_internal_cost is null then null else v_sale_net - p_amate_internal_cost end;
+  v_amate_margin := case when v_amate_profit is null then null else round(v_amate_profit / nullif(v_sale_net, 0) * 100, 4) end;
+
+  return jsonb_build_object(
+    'pvpFinal', round(p_pvp_final, 2),
+    'pvpNet', v_pvp_net,
+    'targetMarginPercent', p_target_margin_percent,
+    'maximumSaleNet', v_maximum_sale_net,
+    'listPriceNet', v_list_price_net,
+    'commercialDiscountPercent', p_discount_percent,
+    'bonusPercent', p_bonus_percent,
+    'saleNet', v_sale_net,
+    'b2bTax', v_b2b_tax,
+    'invoicedPrice', v_invoiced_price,
+    'retailerGrossProfit', v_retailer_profit,
+    'retailerGrossMarginPercent', v_retailer_margin,
+    'retailerMarkupPercent', v_retailer_markup,
+    'amateInternalCost', p_amate_internal_cost,
+    'amateGrossProfit', v_amate_profit,
+    'amateGrossMarginPercent', v_amate_margin
+  );
+end;
+$$;
+
+alter table public.sales_channels enable row level security;
+alter table public.pricing_rules enable row level security;
+alter table public.price_calculations enable row level security;
+
+drop policy if exists "Public reads sales channels" on public.sales_channels;
+create policy "Public reads sales channels" on public.sales_channels
+for select to anon, authenticated using (is_active);
+
+drop policy if exists "Public reads active pricing rules" on public.pricing_rules;
+create policy "Public reads active pricing rules" on public.pricing_rules
+for select to anon, authenticated using (is_active);
+
+drop policy if exists "Admins manage sales channels" on public.sales_channels;
+create policy "Admins manage sales channels" on public.sales_channels
+for all to authenticated using (public.is_catalog_admin()) with check (public.is_catalog_admin());
+
+drop policy if exists "Admins manage pricing rules" on public.pricing_rules;
+create policy "Admins manage pricing rules" on public.pricing_rules
+for all to authenticated using (public.is_catalog_admin()) with check (public.is_catalog_admin());
+
+drop policy if exists "Admins manage price calculations" on public.price_calculations;
+create policy "Admins manage price calculations" on public.price_calculations
+for all to authenticated using (public.is_catalog_admin()) with check (public.is_catalog_admin());
+
+grant select on public.sales_channels, public.pricing_rules to anon, authenticated;
+grant select, insert, update, delete on public.sales_channels, public.pricing_rules, public.price_calculations to authenticated;
+grant usage, select on sequence public.pricing_rules_id_seq, public.price_calculations_id_seq to authenticated;
+grant execute on function public.calculate_commercial_price(numeric, numeric, numeric, numeric, numeric, numeric, numeric) to anon, authenticated;
+
+insert into public.sales_channels (id, name, catalog_id) values
+  ('supermarket', 'Supermercado', 'wholesale'),
+  ('wholesaler', 'Mayorista', 'wholesale'),
+  ('self-service', 'Autoservicio', 'commerce-pos'),
+  ('grocery', 'Almacen', 'commerce-pos'),
+  ('health-store', 'Dietetica', 'commerce-pos'),
+  ('distributor', 'Distribuidor', 'distributor-pallet'),
+  ('special-client', 'Cliente especial', null)
+on conflict (id) do update set name = excluded.name, catalog_id = excluded.catalog_id, is_active = true;
+
+insert into public.pricing_rules (
+  catalog_id, sales_channel_id, target_margin_percent, tax_rate_percent,
+  maximum_discount_percent, payment_terms, minimum_volume
+) values
+  ('wholesale', 'wholesaler', 20, 21, 40, 'Contado', 10),
+  ('distributor-pallet', 'distributor', 15, 21, 40, 'Contado', 1),
+  ('commerce-pos', 'self-service', 25, 21, 40, 'Contado', 1)
+on conflict (catalog_id) do nothing;
+
+commit;
+
+begin;
+
+alter table public.catalogs
+  add column if not exists is_public_sale boolean not null default false;
+
+alter table public.products
+  add column if not exists commercial_key text;
+
+update public.catalogs
+set is_public_sale = (id = 'retail');
+
+create unique index if not exists catalogs_one_public_sale_idx
+  on public.catalogs (is_public_sale)
+  where is_public_sale;
+
+create index if not exists products_commercial_key_idx
+  on public.products (commercial_key)
+  where commercial_key is not null;
+
+with normalized_products as (
+  select
+    id,
+    lower(name) as normalized_name,
+    lower(coalesce(category_name, '')) as normalized_category
+  from public.products
+  where commercial_key is null
+), product_keys as (
+  select
+    id,
+    case
+      when normalized_category like '%mate cocido%' then 'mate-cocido|don-julian'
+      else concat_ws('|',
+        case
+          when normalized_name like '%caricias de mate%' then 'caricias-de-mate'
+          when normalized_name like '%mate y playa%' then 'mate-y-playa'
+          when normalized_name like '%don julian%' then 'don-julian'
+          when normalized_name like '%mateite%' and normalized_name like '%premium%' then 'mateite-premium'
+          when normalized_name like '%mateite%' then 'mateite'
+          when normalized_name like '%yerbella%' then 'yerbella'
+        end,
+        case
+          when normalized_name ~ '(1000g|1\s*kg)' then '1000g'
+          when normalized_name ~ '500\s*g?' then '500g'
+          else 'otra'
+        end,
+        case
+          when normalized_name like '%despalada%' then 'despalada'
+          when normalized_name like '%suave%' then 'suave'
+          when normalized_name like '%terere%' then 'terere'
+          when normalized_name like '%organica%' or normalized_name like '%yerbella%' then 'organica'
+          when normalized_name like '%tradicional%' or normalized_name like '%trad.%' then 'tradicional'
+          else 'clasica'
+        end
+      )
+    end as commercial_key
+  from normalized_products
+  where normalized_category like '%mate cocido%'
+    or normalized_name like '%caricias de mate%'
+    or normalized_name like '%mate y playa%'
+    or normalized_name like '%don julian%'
+    or normalized_name like '%mateite%'
+    or normalized_name like '%yerbella%'
+)
+update public.products as product
+set commercial_key = product_keys.commercial_key
+from product_keys
+where product.id = product_keys.id
+  and product_keys.commercial_key is not null;
+
+create or replace function public.set_public_sale_catalog(target_catalog_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_catalog_admin() then
+    raise exception 'No autorizado';
+  end if;
+
+  if not exists (select 1 from public.catalogs where id = target_catalog_id and is_active) then
+    raise exception 'El catalogo no existe o esta inactivo';
+  end if;
+
+  update public.catalogs
+  set is_public_sale = false, updated_at = now()
+  where is_public_sale;
+
+  update public.catalogs
+  set is_public_sale = true, updated_at = now()
+  where id = target_catalog_id;
+
+  with public_sale_identity as (
+    select distinct on (product.commercial_key)
+      product.commercial_key,
+      product.sku,
+      product.brand
+    from public.catalog_prices as catalog_price
+    join public.products as product
+      on product.id = catalog_price.product_id
+    where catalog_price.catalog_id = target_catalog_id
+      and catalog_price.is_active
+      and product.commercial_key is not null
+    order by product.commercial_key, catalog_price.sort_order, product.id
+  )
+  update public.products as target
+  set
+    sku = source.sku,
+    brand = source.brand,
+    updated_at = now()
+  from public_sale_identity as source
+  where target.commercial_key = source.commercial_key
+    and (target.sku is distinct from source.sku or target.brand is distinct from source.brand);
+end;
+$$;
+
+revoke all on function public.set_public_sale_catalog(text) from public;
+grant execute on function public.set_public_sale_catalog(text) to authenticated;
+
+commit;
+
+begin;
+
+with public_sale_identity as (
+  select distinct on (product.commercial_key)
+    product.commercial_key,
+    product.sku,
+    product.brand
+  from public.catalogs as catalog
+  join public.catalog_prices as catalog_price
+    on catalog_price.catalog_id = catalog.id
+    and catalog_price.is_active
+  join public.products as product
+    on product.id = catalog_price.product_id
+  where catalog.is_public_sale
+    and catalog.is_active
+    and product.commercial_key is not null
+  order by product.commercial_key, catalog_price.sort_order, product.id
+)
+update public.products as target
+set
+  sku = source.sku,
+  brand = source.brand,
+  updated_at = now()
+from public_sale_identity as source
+where target.commercial_key = source.commercial_key
+  and (target.sku is distinct from source.sku or target.brand is distinct from source.brand);
+
+create or replace function public.sync_product_identity_from_pvp()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.commercial_key is null or pg_trigger_depth() > 1 then
+    return new;
+  end if;
+
+  if exists (
+    select 1
+    from public.catalog_prices as catalog_price
+    join public.catalogs as catalog
+      on catalog.id = catalog_price.catalog_id
+    where catalog_price.product_id = new.id
+      and catalog_price.is_active
+      and catalog.is_active
+      and catalog.is_public_sale
+  ) then
+    update public.products
+    set
+      sku = new.sku,
+      brand = new.brand,
+      updated_at = now()
+    where commercial_key = new.commercial_key
+      and id <> new.id
+      and (sku is distinct from new.sku or brand is distinct from new.brand);
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists products_sync_identity_from_pvp on public.products;
+create trigger products_sync_identity_from_pvp
+after insert or update of sku, brand, commercial_key
+on public.products
+for each row
+execute function public.sync_product_identity_from_pvp();
+
+create or replace function public.sync_linked_product_identity_from_pvp()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  source_product public.products%rowtype;
+begin
+  if not new.is_active or pg_trigger_depth() > 1 then
+    return new;
+  end if;
+
+  if not exists (
+    select 1
+    from public.catalogs
+    where id = new.catalog_id
+      and is_active
+      and is_public_sale
+  ) then
+    return new;
+  end if;
+
+  select *
+  into source_product
+  from public.products
+  where id = new.product_id;
+
+  if source_product.commercial_key is not null then
+    update public.products
+    set
+      sku = source_product.sku,
+      brand = source_product.brand,
+      updated_at = now()
+    where commercial_key = source_product.commercial_key
+      and id <> source_product.id
+      and (sku is distinct from source_product.sku or brand is distinct from source_product.brand);
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists catalog_prices_sync_identity_from_pvp on public.catalog_prices;
+create trigger catalog_prices_sync_identity_from_pvp
+after insert or update of catalog_id, product_id, is_active
+on public.catalog_prices
+for each row
+execute function public.sync_linked_product_identity_from_pvp();
 
 commit;

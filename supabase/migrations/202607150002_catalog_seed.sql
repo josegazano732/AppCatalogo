@@ -11,6 +11,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -23,6 +24,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -35,6 +37,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -47,6 +50,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -59,6 +63,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -71,6 +76,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -83,6 +89,7 @@ with seed_products as (
     "image": "assets/products/YM MATEITE PREMIUM.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -95,6 +102,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 101,
     "metadata": {}
@@ -107,6 +115,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -119,6 +128,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -131,6 +141,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -143,6 +154,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -155,6 +167,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -167,6 +180,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "pack",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -179,6 +193,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -191,6 +206,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -203,6 +219,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -215,6 +232,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -227,6 +245,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -239,6 +258,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -251,6 +271,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -263,6 +284,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -275,6 +297,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -287,6 +310,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -299,6 +323,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -311,6 +336,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -323,6 +349,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -335,6 +362,7 @@ with seed_products as (
     "image": "assets/products/MC Mate cocido DON JULIAN x20 PACK.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -347,6 +375,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -359,6 +388,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -371,6 +401,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -383,6 +414,7 @@ with seed_products as (
     "image": "assets/products/YM x1000g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -395,6 +427,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -407,6 +440,7 @@ with seed_products as (
     "image": "assets/products/YM Yerbella x500.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -419,6 +453,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate SUAVE.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -431,6 +466,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Caricias de Mate TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -443,6 +479,7 @@ with seed_products as (
     "image": "assets/products/don-julian-nueva.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -455,6 +492,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa TRADICIONAL.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -467,6 +505,7 @@ with seed_products as (
     "image": "assets/products/YM x500g Mate y Playa Terere.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -479,6 +518,7 @@ with seed_products as (
     "image": "assets/products/YM Mateite.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -491,6 +531,7 @@ with seed_products as (
     "image": "assets/products/YM MATEITE PREMIUM.jpeg",
     "unit_of_measure": "unidad",
     "sku": null,
+    "commercial_key": null,
     "brand": null,
     "stock": 100,
     "metadata": {}
@@ -503,6 +544,7 @@ with seed_products as (
     "image": "assets/products/holowaty/YERUPE Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1001",
+    "commercial_key": null,
     "brand": "YERUPE",
     "stock": 100,
     "metadata": {
@@ -521,6 +563,7 @@ with seed_products as (
     "image": "assets/products/holowaty/YERUPE Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1002",
+    "commercial_key": null,
     "brand": "YERUPE",
     "stock": 100,
     "metadata": {
@@ -539,6 +582,7 @@ with seed_products as (
     "image": "assets/products/holowaty/ALAZAN Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1003",
+    "commercial_key": null,
     "brand": "ALAZAN",
     "stock": 100,
     "metadata": {
@@ -557,6 +601,7 @@ with seed_products as (
     "image": "assets/products/holowaty/ALAZAN Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1004",
+    "commercial_key": null,
     "brand": "ALAZAN",
     "stock": 100,
     "metadata": {
@@ -575,6 +620,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO ROJO Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1005",
+    "commercial_key": null,
     "brand": "SELLO ROJO",
     "stock": 100,
     "metadata": {
@@ -593,6 +639,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO ROJO Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1006",
+    "commercial_key": null,
     "brand": "SELLO ROJO",
     "stock": 100,
     "metadata": {
@@ -611,6 +658,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO NEGRO Yerba Mate 500 g.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1007",
+    "commercial_key": null,
     "brand": "SELLO NEGRO",
     "stock": 100,
     "metadata": {
@@ -629,6 +677,7 @@ with seed_products as (
     "image": "assets/products/holowaty/SELLO NEGRO Yerba Mate 1 kg.jpeg",
     "unit_of_measure": "unidad",
     "sku": "1008",
+    "commercial_key": null,
     "brand": "SELLO NEGRO",
     "stock": 100,
     "metadata": {
@@ -647,6 +696,7 @@ with seed_products as (
     image text,
     unit_of_measure text,
     sku text,
+    commercial_key text,
     brand text,
     stock numeric,
     metadata jsonb
@@ -660,6 +710,7 @@ insert into public.products (
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -672,6 +723,7 @@ select
   image,
   unit_of_measure,
   sku,
+  commercial_key,
   brand,
   stock,
   metadata
@@ -683,6 +735,7 @@ on conflict (id) do update set
   image = excluded.image,
   unit_of_measure = excluded.unit_of_measure,
   sku = excluded.sku,
+  commercial_key = coalesce(excluded.commercial_key, public.products.commercial_key),
   brand = excluded.brand,
   stock = excluded.stock,
   metadata = excluded.metadata;
