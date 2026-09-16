@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Product } from '../models/product.model';
 import { ProductService } from './product.service';
 import { SupabaseService } from './supabase.service';
-import { attachPvpReferences, calculateExistingMarginPercent, calculatePrice, calculateScenarios, getCommercialProductKey, getCommercialProductKeys, resolveCommercialProductKey, roundShelfPrice } from './pricing-calculator';
+import { attachPvpReferences, calculateExistingMarginPercent, calculatePrice, calculateScenarios, getCommercialProductKey, getCommercialProductKeys, getPackUnitsFromName, resolveCommercialProductKey, roundShelfPrice } from './pricing-calculator';
 
 describe('pricing calculator', () => {
   it('calcula hacia atras desde un PVP de $2.000 con IVA 21% y margen 25%', () => {
@@ -36,6 +36,13 @@ describe('pricing calculator', () => {
   it('calcula el margen real que ya tiene un precio de lista', () => {
     expect(calculateExistingMarginPercent(2000, 1500)).toBe(25);
     expect(calculateExistingMarginPercent(1800, 1452)).toBeCloseTo(19.3333, 4);
+  });
+
+  it('infiere la cantidad de unidades de un pack desde el nombre', () => {
+    expect(getPackUnitsFromName('YM DON JULIAN DESPALADA 10x500g PACK')).toBe(10);
+    expect(getPackUnitsFromName('YM DON JULIAN Pack 10x1kg PACK')).toBe(10);
+    expect(getPackUnitsFromName('MC Mate cocido DON JULIAN x20 PACK')).toBe(20);
+    expect(getPackUnitsFromName('YM MATEITE PREMIUM 500g PALLET x75 PACK')).toBe(75);
   });
 
   it.each([

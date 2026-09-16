@@ -20,6 +20,13 @@ export function calculateExistingMarginPercent(pvpFinal: number, commercialPrice
   return toNumber(pvp.minus(commercialPrice).div(pvp).times(100).toDecimalPlaces(PERCENT_DECIMALS));
 }
 
+export function getPackUnitsFromName(productName: string): number {
+  const leadingUnits = productName.match(/(\d+)\s*x/i)?.[1];
+  const trailingUnits = productName.match(/x\s*(\d+)/i)?.[1];
+  const parsedUnits = Number(leadingUnits ?? trailingUnits ?? 1);
+  return Number.isFinite(parsedUnits) && parsedUnits > 0 ? parsedUnits : 1;
+}
+
 export function calculatePrice(input: PriceCalculationInput): PriceCalculation {
   validatePercentage(input.taxRatePercent, 'IVA');
   validatePercentage(input.targetMarginPercent, 'margen objetivo');

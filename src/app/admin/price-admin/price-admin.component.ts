@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { Product } from '../../models/product.model';
 import { PricingRule } from '../../models/pricing.model';
-import { calculateExistingMarginPercent, calculatePrice, DEFAULT_SCENARIO_MARGINS, getCommercialProductKey, getCommercialProductKeys, resolveCommercialProductKey } from '../../services/pricing-calculator';
+import { calculateExistingMarginPercent, calculatePrice, DEFAULT_SCENARIO_MARGINS, getCommercialProductKey, getCommercialProductKeys, getPackUnitsFromName, resolveCommercialProductKey } from '../../services/pricing-calculator';
 import { PricingService } from '../../services/pricing.service';
 import {
   PriceCatalog,
@@ -1055,14 +1055,17 @@ export class PriceAdminComponent implements OnInit {
   }
 
   private getPricingItemUnits(product: Product): number {
-    if (!product || product.unit_of_measure?.toLowerCase() !== 'pack') {
+    if (!product) {
       return 1;
     }
 
-    const leadingUnits = product.name.match(/(\d+)\s*x/i)?.[1];
-    const trailingUnits = product.name.match(/x\s*(\d+)/i)?.[1];
-    const parsedUnits = Number(leadingUnits ?? trailingUnits ?? 1);
-    return Number.isFinite(parsedUnits) && parsedUnits > 0 ? parsedUnits : 1;
+    const unitOfMeasure = (product.unit_of_measure ?? '').toLowerCase();
+    // El catalogo de comercios y puntos de venta vende packs. Si un producto
+    // quedo cargado con "unidad" en lugar de "pack", se infiere igualmente la
+    // cantidad de unidades desde el nombre para no romper el calculo de margen.
+    const sellsByPack = unitOfMeasure === 'pack' || this.selectedCatalogId === 'commerce-pos';
+
+    return sellsByPack ? getPackUnitsFromName(product.name) : 1;
   }
 
   private getPublicSaleProductPrice(product: Product): number {
