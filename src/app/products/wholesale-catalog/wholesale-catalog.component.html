@@ -77,14 +77,18 @@
             <p>{{ getDisplayNetPriceLabel(product) }}: {{ formatPrice(getNetPriceWithoutTax(product)) }}</p>
             <p>Precio unitario s/IVA: {{ formatPrice(getUnitNetPriceWithoutTax(product)) }}</p>
           </details>
-          <p *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
-          <small>{{ getCategoryLabel(product) }}<ng-container *ngIf="product.pvp_reference_price !== undefined"> · PVP: {{ formatPrice(product.pvp_reference_price) }}</ng-container></small>
+          <p *ngIf="isPackProduct(product)">Precio Unitario Final: {{ formatPrice(getUnitGrossPrice(product)) }}</p>
+          <p class="sale-suggested">
+            <span class="sale-suggested-label">Sugerido PVP</span>
+            <span>{{ formatPrice(getSuggestedSaleMin(product)) }} - {{ formatPrice(getSuggestedSaleMax(product)) }}</span>
+          </p>
+          <small class="product-category">{{ getCategoryLabel(product) }}</small>
         </div>
       </div>
 
       <div class="price-col">
         <strong>{{ getDisplayGrossPriceLabel(product) }}: {{ formatPrice(getGrossPrice(product)) }}</strong>
-        <small *ngIf="isPackProduct(product)">Precio unitario: {{ formatPrice(getUnitGrossPrice(product)) }}</small>
+        <small *ngIf="isPackProduct(product)">Precio Unitario Final: {{ formatPrice(getUnitGrossPrice(product)) }}</small>
       </div>
 
       <div class="qty-col">

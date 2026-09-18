@@ -16,7 +16,10 @@ interface MixPackItem {
 @Component({
   selector: 'app-commerce-pos-catalog',
   templateUrl: './commerce-pos-catalog.component.html',
-  styleUrls: ['../whatsapp-catalog/whatsapp-catalog.component.css']
+  styleUrls: [
+    '../whatsapp-catalog/whatsapp-catalog.component.css',
+    './commerce-pos-catalog.component.css'
+  ]
 })
 export class CommercePosCatalogComponent implements OnInit, OnDestroy {
   private readonly pdfExpandedImageSize = 7.2;
