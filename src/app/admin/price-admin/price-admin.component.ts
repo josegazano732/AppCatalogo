@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { buildMarginsPdfSummary, MarginsPdfSummary } from './margins-pdf';
 import { Product } from '../../models/product.model';
 import { PricingRule } from '../../models/pricing.model';
 import { calculateExistingMarginPercent, calculatePrice, DEFAULT_SCENARIO_MARGINS, getCommercialProductKey, getCommercialProductKeys, getPackUnitsFromName, resolveCommercialProductKey } from '../../services/pricing-calculator';
@@ -93,6 +94,7 @@ export class PriceAdminComponent implements OnInit {
   productForm: ProductFormState = this.createEmptyProductForm();
   pricingRule: PricingRule = this.createDefaultPricingRule();
   pricingRows: ProductPricingRow[] = [];
+  pricingRowsByLine: Array<{ key: 'premium' | 'masiva' | 'otro'; label: string; rows: ProductPricingRow[] }> = [];
   pricingBulkMargin = 25;
   isCalculatingPrice = false;
   isSavingPricingRule = false;
@@ -417,33 +419,51 @@ export class PriceAdminComponent implements OnInit {
       ]);
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const autoTable = autoTableModule.default;
+      const summary = buildMarginsPdfSummary(this.pricingRows.map((row: ProductPricingRow) => ({
+        productName: row.product.name,
+        pvpFinal: row.pvpFinal,
+        currentCatalogPrice: row.currentCatalogPrice,
+        currentMarginPercent: row.currentMarginPercent,
+        targetMarginPercent: row.targetMarginPercent,
+        proposedCatalogPrice: row.proposedCatalogPrice
+      })), this.selectedCatalog.name);
+      const logoData = await this.loadMarginsPdfLogo();
       const pageWidth = pdf.internal.pageSize.getWidth();
       const availableTableHeight = pdf.internal.pageSize.getHeight() - 34;
       const rowHeight = Math.min(7.2, availableTableHeight / (this.pricingRows.length + 1));
       const fontSize = Math.max(4.2, Math.min(7, rowHeight * 0.72));
-      const body = this.pricingRows.map((row: ProductPricingRow) => [
-        row.product.name,
-        this.formatOptionalPrice(row.pvpFinal),
-        this.formatPrice(row.currentCatalogPrice),
-        this.formatOptionalPercent(row.currentMarginPercent),
-        this.formatPercent(row.targetMarginPercent),
-        this.formatOptionalPrice(row.proposedCatalogPrice)
-      ]);
+      const body = this.pricingRowsByLine.flatMap((group: { key: 'premium' | 'masiva' | 'otro'; label: string; rows: ProductPricingRow[] }) => {
+        const lines: Array<Array<string | { content: string; colSpan: number; styles: Record<string, unknown> }>> = [[{
+          content: `LÍNEA ${group.label.toUpperCase()}`,
+          colSpan: 6,
+          styles: {
+            halign: 'left',
+            fontStyle: 'bold',
+            textColor: [21, 57, 45],
+            fillColor: [239, 246, 241]
+          }
+        }]];
 
-      pdf.setTextColor(21, 34, 29);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.text('Margenes actuales y objetivo', 10, 12);
-      pdf.setFontSize(9);
-      pdf.text(`Productos de ${this.selectedCatalog.name}`, 10, 18);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
-      pdf.setTextColor(101, 115, 109);
-      pdf.text(`Generado: ${new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date())}`, pageWidth - 10, 18, { align: 'right' });
+        group.rows.forEach((row: ProductPricingRow) => {
+          lines.push([
+            row.product.name,
+            this.formatOptionalPrice(row.pvpFinal),
+            this.formatPrice(row.currentCatalogPrice),
+            this.formatOptionalPercent(row.currentMarginPercent),
+            this.formatPercent(row.targetMarginPercent),
+            this.formatOptionalPrice(row.proposedCatalogPrice)
+          ]);
+        });
+
+        return lines;
+      });
+
+      this.drawMarginsPdfHeader(pdf, logoData, summary);
 
       autoTable(pdf, {
-        startY: 23,
-        margin: { left: 18, right: 18, bottom: 8 },
+        startY: 52,
+        margin: { left: 8, right: 8, bottom: 10 },
+        tableWidth: pageWidth - 16,
         theme: 'grid',
         pageBreak: 'avoid',
         rowPageBreak: 'avoid',
@@ -475,12 +495,15 @@ export class PriceAdminComponent implements OnInit {
         },
         alternateRowStyles: { fillColor: [243, 246, 244] },
         columnStyles: {
-          0: { cellWidth: 79, halign: 'left' },
-          1: { cellWidth: 38, halign: 'right' },
-          2: { cellWidth: 38, halign: 'right' },
-          3: { cellWidth: 34, halign: 'right' },
-          4: { cellWidth: 34, halign: 'right' },
-          5: { cellWidth: 38, halign: 'right' }
+          0: { cellWidth: 99, halign: 'left' },
+          1: { cellWidth: 38, halign: 'center' },
+          2: { cellWidth: 38, halign: 'center' },
+          3: { cellWidth: 34, halign: 'center' },
+          4: { cellWidth: 34, halign: 'center' },
+          5: { cellWidth: 38, halign: 'center' }
+        },
+        didDrawPage: (data: any): void => {
+          this.drawMarginsPdfFooter(pdf, data.pageNumber);
         }
       });
 
@@ -488,12 +511,144 @@ export class PriceAdminComponent implements OnInit {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
       pdf.save(`margenes-${fileCatalog || this.selectedCatalogId}.pdf`);
-      this.showFeedback('PDF de margenes generado en una hoja A4 horizontal.', 'success');
+      this.showFeedback('PDF de margenes generado con formato profesional.', 'success');
     } catch {
       this.showFeedback('No se pudo generar el PDF de margenes.', 'error');
     } finally {
       this.isGeneratingMarginsPdf = false;
     }
+  }
+
+  private async loadMarginsPdfLogo(): Promise<string | null> {
+    try {
+      const response = await fetch('assets/branding/amate-logo.jpg');
+      if (!response.ok) {
+        return null;
+      }
+
+      const blob = await response.blob();
+      const dataUrl = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+
+      if (!dataUrl || typeof document === 'undefined') {
+        return dataUrl;
+      }
+
+      return await new Promise<string | null>((resolve) => {
+        const image = new Image();
+
+        image.onload = () => {
+          const size = 36;
+          const padding = 2;
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+
+          if (!context) {
+            resolve(dataUrl);
+            return;
+          }
+
+          canvas.width = size;
+          canvas.height = size;
+
+          context.clearRect(0, 0, size, size);
+          context.save();
+          context.beginPath();
+          context.arc(size / 2, size / 2, (size / 2) - padding, 0, Math.PI * 2);
+          context.closePath();
+          context.clip();
+
+          const ratio = Math.max((size - (padding * 2)) / image.width, (size - (padding * 2)) / image.height);
+          const renderWidth = image.width * ratio;
+          const renderHeight = image.height * ratio;
+          const renderX = (size - renderWidth) / 2;
+          const renderY = (size - renderHeight) / 2;
+
+          context.drawImage(image, renderX, renderY, renderWidth, renderHeight);
+          context.restore();
+
+          context.beginPath();
+          context.arc(size / 2, size / 2, (size / 2) - padding, 0, Math.PI * 2);
+          context.closePath();
+          context.lineWidth = 2;
+          context.strokeStyle = '#dfe9df';
+          context.stroke();
+
+          resolve(canvas.toDataURL('image/png'));
+        };
+
+        image.onerror = () => resolve(dataUrl);
+        image.src = dataUrl;
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  private drawMarginsPdfHeader(pdf: any, logoData: string | null, summary: MarginsPdfSummary): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const headerX = 8;
+    const headerY = 8;
+    const headerWidth = pageWidth - 16;
+    const producedAt = new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date());
+
+    pdf.setFillColor(245, 247, 242);
+    pdf.roundedRect(headerX, headerY, headerWidth, 24, 3.5, 3.5, 'F');
+
+    pdf.setFillColor(18, 68, 53);
+    pdf.roundedRect(headerX, headerY, headerWidth, 8, 3.5, 3.5, 'F');
+
+    pdf.setDrawColor(195, 207, 199);
+    pdf.setLineWidth(0.2);
+    pdf.roundedRect(headerX, headerY, headerWidth, 24, 3.5, 3.5, 'S');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.text('AMATE PEDIDOS', headerX + 8, headerY + 5.5);
+
+    pdf.setTextColor(22, 43, 35);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.text(summary.title, headerX + 8, headerY + 15.5);
+
+    pdf.setTextColor(92, 104, 98);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.text(`Catalogo: ${summary.catalogName}`, headerX + 8, headerY + 21);
+    pdf.text(`Generado: ${producedAt}`, pageWidth - 8, headerY + 21, { align: 'right' });
+
+    if (logoData) {
+      try {
+        const logoSize = 12;
+        const logoX = pageWidth - 18;
+        const logoY = headerY + 0.9;
+
+        pdf.addImage(logoData, 'PNG', logoX - logoSize, logoY, logoSize, logoSize, undefined, 'FAST');
+      } catch {
+        // Si el logo no se puede renderizar, el archivo sigue generandose.
+      }
+    }
+  }
+
+  private drawMarginsPdfFooter(pdf: any, pageNumber: number): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const footerY = pageHeight - 6;
+
+    pdf.setDrawColor(190, 206, 197);
+    pdf.setLineWidth(0.2);
+    pdf.line(8, footerY - 4, pageWidth - 8, footerY - 4);
+
+    pdf.setTextColor(100, 112, 105);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.text('AMATE | Gestion de precios', 10, footerY);
+    pdf.text(`Pagina ${pageNumber}`, pageWidth - 10, footerY, { align: 'right' });
   }
 
   formatPercent(value: number): string {
@@ -982,6 +1137,7 @@ export class PriceAdminComponent implements OnInit {
 
   private async initializeCommercialPricing(): Promise<void> {
     this.pricingRows = [];
+    this.pricingRowsByLine = [];
 
     if (!this.supportsCommercialPricing) {
       return;
@@ -1026,8 +1182,10 @@ export class PriceAdminComponent implements OnInit {
         this.calculatePricingRow(row);
         return row;
       });
+      this.pricingRowsByLine = this.buildPricingRowsByLine(this.pricingRows);
     } catch {
       this.pricingRows = [];
+      this.pricingRowsByLine = [];
       this.showFeedback('No se pudo relacionar esta lista con los PVP de Consumidor Final.', 'error');
     }
   }
@@ -1066,6 +1224,36 @@ export class PriceAdminComponent implements OnInit {
     const sellsByPack = unitOfMeasure === 'pack' || this.selectedCatalogId === 'commerce-pos';
 
     return sellsByPack ? getPackUnitsFromName(product.name) : 1;
+  }
+
+  private buildPricingRowsByLine(rows: ProductPricingRow[]): Array<{ key: 'premium' | 'masiva' | 'otro'; label: string; rows: ProductPricingRow[] }> {
+    const groups: Array<{ key: 'premium' | 'masiva' | 'otro'; label: string; rows: ProductPricingRow[] }> = [
+      { key: 'premium', label: 'Premium', rows: [] },
+      { key: 'masiva', label: 'Masiva', rows: [] },
+      { key: 'otro', label: 'General', rows: [] }
+    ];
+
+    rows.forEach((row: ProductPricingRow) => {
+      const groupKey = this.getPricingLineKey(row.product);
+      const group = groups.find((entry) => entry.key === groupKey) ?? groups[2];
+      group.rows.push(row);
+    });
+
+    return groups.filter((group) => group.rows.length > 0);
+  }
+
+  private getPricingLineKey(product: Product): 'premium' | 'masiva' | 'otro' {
+    const normalizedName = this.normalizeText(product.name);
+
+    if (normalizedName.includes('don julian') || normalizedName.includes('mateite') || normalizedName.includes('yerbella')) {
+      return 'premium';
+    }
+
+    if (normalizedName.includes('caricias de mate') || normalizedName.includes('mate y playa')) {
+      return 'masiva';
+    }
+
+    return 'otro';
   }
 
   private getPublicSaleProductPrice(product: Product): number {

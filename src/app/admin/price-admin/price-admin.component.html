@@ -221,27 +221,38 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of pricingRows" [class.unmatched]="!row.retailProduct">
-                <td class="pricing-product-name">
-                  <strong>{{ row.product.name }}</strong>
-                  <small *ngIf="row.retailProduct">Referencia: {{ row.retailProduct.name }}</small>
-                  <small *ngIf="!row.retailProduct">Sin coincidencia en PVP Consumidor Final</small>
-                </td>
-                <td>
-                  <div class="pricing-money-field"><span>$</span><input type="number" min="0.01" step="0.01" [(ngModel)]="row.pvpFinal" (ngModelChange)="onPricingPvpChange(row)"></div>
-                </td>
-                <td>
-                  <strong>{{ formatPrice(row.currentCatalogPrice) }}</strong>
-                  <small *ngIf="row.currentCatalogPrice !== row.currentUnitPrice">{{ formatPrice(row.currentUnitPrice) }} por unidad</small>
-                </td>
-                <td><span class="current-margin" [class.negative]="row.currentMarginPercent !== null && row.currentMarginPercent < 0">{{ formatOptionalPercent(row.currentMarginPercent) }}</span></td>
-                <td><div class="pricing-percent-field"><input type="number" min="0" max="99.99" step="0.01" [(ngModel)]="row.targetMarginPercent" (ngModelChange)="onTargetMarginChange(row)"><span>%</span></div></td>
-                <td>
-                  <strong>{{ formatOptionalPrice(row.proposedCatalogPrice) }}</strong>
-                  <small *ngIf="row.proposedUnitPrice !== null && row.proposedCatalogPrice !== row.proposedUnitPrice">{{ formatOptionalPrice(row.proposedUnitPrice) }} por unidad</small>
-                </td>
-                <td><button type="button" class="pricing-row-apply" title="Aplicar precio" (click)="applyCalculatedPrice(row)" [disabled]="row.proposedCatalogPrice === null"><i class="fas fa-check" aria-hidden="true"></i></button></td>
-              </tr>
+              <ng-container *ngFor="let lineGroup of pricingRowsByLine">
+                <tr class="pricing-line-header">
+                  <td colspan="7">
+                    <span class="pricing-line-badge" [class.premium]="lineGroup.key === 'premium'" [class.masiva]="lineGroup.key === 'masiva'">
+                      {{ lineGroup.label }}
+                    </span>
+                    <small>{{ lineGroup.rows.length }} productos</small>
+                  </td>
+                </tr>
+
+                <tr *ngFor="let row of lineGroup.rows" [class.unmatched]="!row.retailProduct">
+                  <td class="pricing-product-name">
+                    <strong>{{ row.product.name }}</strong>
+                    <small *ngIf="row.retailProduct">Referencia: {{ row.retailProduct.name }}</small>
+                    <small *ngIf="!row.retailProduct">Sin coincidencia en PVP Consumidor Final</small>
+                  </td>
+                  <td>
+                    <div class="pricing-money-field"><span>$</span><input type="number" min="0.01" step="0.01" [(ngModel)]="row.pvpFinal" (ngModelChange)="onPricingPvpChange(row)"></div>
+                  </td>
+                  <td>
+                    <strong>{{ formatPrice(row.currentCatalogPrice) }}</strong>
+                    <small *ngIf="row.currentCatalogPrice !== row.currentUnitPrice">{{ formatPrice(row.currentUnitPrice) }} por unidad</small>
+                  </td>
+                  <td><span class="current-margin" [class.negative]="row.currentMarginPercent !== null && row.currentMarginPercent < 0">{{ formatOptionalPercent(row.currentMarginPercent) }}</span></td>
+                  <td><div class="pricing-percent-field"><input type="number" min="0" max="99.99" step="0.01" [(ngModel)]="row.targetMarginPercent" (ngModelChange)="onTargetMarginChange(row)"><span>%</span></div></td>
+                  <td>
+                    <strong>{{ formatOptionalPrice(row.proposedCatalogPrice) }}</strong>
+                    <small *ngIf="row.proposedUnitPrice !== null && row.proposedCatalogPrice !== row.proposedUnitPrice">{{ formatOptionalPrice(row.proposedUnitPrice) }} por unidad</small>
+                  </td>
+                  <td><button type="button" class="pricing-row-apply" title="Aplicar precio" (click)="applyCalculatedPrice(row)" [disabled]="row.proposedCatalogPrice === null"><i class="fas fa-check" aria-hidden="true"></i></button></td>
+                </tr>
+              </ng-container>
             </tbody>
           </table>
         </div>

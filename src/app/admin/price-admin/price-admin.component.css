@@ -423,6 +423,45 @@ select {
   background: #f7faf8;
 }
 
+.pricing-line-header td {
+  padding: 10px 12px;
+  background: #edf5f0;
+  border-bottom: 1px solid #cfe0d4;
+}
+
+.pricing-line-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  color: var(--admin-accent-dark);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #dfeee6;
+  border: 1px solid #c3d8ca;
+  border-radius: 999px;
+}
+
+.pricing-line-badge.premium {
+  color: #fff;
+  background: linear-gradient(135deg, #176b4d, #1d845d);
+  border-color: #176b4d;
+}
+
+.pricing-line-badge.masiva {
+  color: #4a3a2e;
+  background: linear-gradient(135deg, #f5e2b8, #f1d28a);
+  border-color: #e0bf6d;
+}
+
+.pricing-line-header small {
+  margin-left: 10px;
+  color: var(--admin-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .pricing-products-table tr.unmatched {
   background: #fff9f0;
 }

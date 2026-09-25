@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Product } from '../models/product.model';
 import { ProductService } from './product.service';
 import { SupabaseService } from './supabase.service';
+import { buildMarginsPdfSummary } from '../admin/price-admin/margins-pdf';
 import { attachPvpReferences, calculateExistingMarginPercent, calculatePrice, calculateScenarios, getCommercialProductKey, getCommercialProductKeys, getPackUnitsFromName, resolveCommercialProductKey, roundShelfPrice } from './pricing-calculator';
 
 describe('pricing calculator', () => {
@@ -31,6 +32,35 @@ describe('pricing calculator', () => {
   it('calcula la tabla de escenarios configurable', () => {
     const scenarios = calculateScenarios({ pvpFinal: 2000, taxRatePercent: 21 });
     expect(scenarios.map((scenario) => scenario.targetMarginPercent)).toEqual([15, 20, 25, 30, 35, 40]);
+  });
+
+  it('prepara un resumen ejecutivo para el PDF de margenes', () => {
+    const summary = buildMarginsPdfSummary([
+      {
+        productName: 'Yerba mate premium',
+        pvpFinal: 2500,
+        currentCatalogPrice: 1800,
+        currentMarginPercent: 20,
+        targetMarginPercent: 25,
+        proposedCatalogPrice: 2100
+      },
+      {
+        productName: 'Mate cocido',
+        pvpFinal: null,
+        currentCatalogPrice: 1500,
+        currentMarginPercent: null,
+        targetMarginPercent: 30,
+        proposedCatalogPrice: null
+      }
+    ], 'Lista mayorista');
+
+    expect(summary.title).toBe('Margenes actuales y objetivo');
+    expect(summary.catalogName).toBe('Lista mayorista');
+    expect(summary.productCount).toBe(2);
+    expect(summary.productsWithPvp).toBe(1);
+    expect(summary.productsWithoutPvp).toBe(1);
+    expect(summary.productsWithProposedPrice).toBe(1);
+    expect(summary.averageTargetMarginPercent).toBeCloseTo(27.5, 2);
   });
 
   it('calcula el margen real que ya tiene un precio de lista', () => {
