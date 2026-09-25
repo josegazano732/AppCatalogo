@@ -22,8 +22,8 @@ interface MixPackItem {
   ]
 })
 export class CommercePosCatalogComponent implements OnInit, OnDestroy {
-  private readonly pdfExpandedImageSize = 7.2;
-  private readonly pdfExpandedImageMinCellHeight = 8;
+  private readonly pdfExpandedImageSize = 5.2;
+  private readonly pdfExpandedImageMinCellHeight = 5.8;
   private readonly pdfDetailWidth = 226;
 
   private readonly productDisplayOrder: string[] = [
@@ -177,7 +177,7 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
         const enabledCategories = new Set(this.commerceCategories.map((item) => this.normalizeText(item)));
 
         const wholesaleProducts = products
-          .filter((product: Product) => (product.wholesale_price ?? 0) > 0)
+          .filter((product: Product) => this.getWholesalePrice(product) > 0)
           .filter((product: Product) => enabledCategories.has(this.normalizeText(this.getCategoryLabel(product))))
           .sort((a: Product, b: Product) => this.getProductSortRank(a) - this.getProductSortRank(b));
 
@@ -264,26 +264,28 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
       ]);
       const tableBody: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [];
 
-      this.buildCommercePdfRowsByCategory(products, 'Mate Cocido').forEach((row) => tableBody.push(row));
-      this.buildCommercePdfRowsByCategory(products, 'Yerba Mate').forEach((row) => tableBody.push(row));
+      this.buildCommercePdfRowsByLine(products, 'premium').forEach((row) => tableBody.push(row));
+      this.buildCommercePdfRowsByLine(products, 'masiva').forEach((row) => tableBody.push(row));
 
       this.drawCommercePdfHeader(pdf, logoData);
 
       autoTable(pdf, {
-        startY: 27,
+        startY: 34,
         theme: 'grid',
         tableWidth: 'auto',
         margin: {
           left: detailMarginX,
-          right: detailMarginX
+          right: detailMarginX,
+          bottom: 14
         },
+        pageBreak: 'avoid',
         head: [[
-          'Descripcion',
-          'P. PACK',
-          'P. NETO',
-          'U. BRUTO',
-          'U. NETO',
-          'Categoria'
+          'Producto / presentacion',
+          'Precio pack c/IVA',
+          'Precio pack s/IVA',
+          'Precio unidad c/IVA',
+          'Precio unidad s/IVA',
+          'Linea'
         ]],
         body: tableBody,
         styles: {
@@ -297,16 +299,17 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
           halign: 'center'
         },
         headStyles: {
-          fillColor: [212, 223, 186],
-          textColor: [43, 56, 35],
+          fillColor: [54, 78, 39],
+          textColor: [255, 255, 255],
           fontStyle: 'bold',
-          halign: 'center'
+          halign: 'center',
+          cellPadding: { top: 1.4, right: 0.8, bottom: 1.4, left: 0.8 }
         },
         bodyStyles: {
-          fillColor: [248, 249, 243]
+          fillColor: [255, 255, 255]
         },
         alternateRowStyles: {
-          fillColor: [239, 244, 231]
+          fillColor: [244, 247, 238]
         },
         columnStyles: {
           0: { cellWidth: 98, halign: 'left' },
@@ -320,9 +323,18 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
           const rawRow = hookData.row.raw;
 
           if (Array.isArray(rawRow) && rawRow.length === 1 && typeof rawRow[0] === 'object' && rawRow[0] !== null) {
-            hookData.cell.styles['fillColor'] = [226, 234, 204];
+            hookData.cell.styles['fillColor'] = [224, 235, 207];
             hookData.cell.styles['fontStyle'] = 'bold';
-            hookData.cell.styles['textColor'] = [56, 71, 44];
+            hookData.cell.styles['textColor'] = [45, 70, 35];
+            hookData.cell.styles['cellPadding'] = { top: 0.9, right: 1.2, bottom: 0.9, left: 1.2 };
+          }
+
+          if (Array.isArray(rawRow) && rawRow.length > 2 && hookData.column.index >= 1 && hookData.column.index <= 4) {
+            hookData.cell.styles['fontStyle'] = 'bold';
+            hookData.cell.styles['textColor'] = [46, 82, 31];
+            hookData.cell.styles['fillColor'] = hookData.column.index === 1 || hookData.column.index === 3
+              ? [232, 242, 218]
+              : [247, 249, 242];
           }
 
           if (Array.isArray(rawRow) && rawRow.length > 2 && hookData.column.index === 0) {
@@ -361,6 +373,9 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
           } catch {
             // Si alguna imagen falla, mantenemos la exportacion sin interrumpir el PDF.
           }
+        },
+        didDrawPage: (hookData: any) => {
+          this.drawCommercePdfFooter(pdf, hookData.pageNumber);
         }
       });
 
@@ -728,22 +743,23 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     }, {});
   }
 
-  private buildCommercePdfRowsByCategory(products: Product[], sourceCategoryLabel: string): Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> {
-    const categoryProducts = products
-      .filter((product: Product) => this.normalizeText(this.getCategoryLabel(product)) === this.normalizeText(sourceCategoryLabel))
+  private buildCommercePdfRowsByLine(products: Product[], lineKey: 'premium' | 'masiva'): Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> {
+    const lineProducts = products
+      .filter((product: Product) => this.getCommercePdfLineKey(product) === lineKey)
       .sort((first: Product, second: Product) => this.getProductSortRank(first) - this.getProductSortRank(second));
 
-    if (categoryProducts.length === 0) {
+    if (lineProducts.length === 0) {
       return [];
     }
 
+    const lineLabel = lineKey === 'premium' ? 'LINEA PREMIUM' : 'LINEA MASIVA';
     const rows: Array<Array<string> | Array<{ content: string; colSpan: number; styles: Record<string, unknown> }>> = [[{
-      content: sourceCategoryLabel,
+      content: lineLabel,
       colSpan: 6,
       styles: { halign: 'left' }
     }]];
 
-    categoryProducts.forEach((product: Product) => rows.push([
+    lineProducts.forEach((product: Product) => rows.push([
       {
         content: product.name,
         productKey: this.getCommercePdfRowCode(product)
@@ -758,6 +774,20 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     return rows;
   }
 
+  private getCommercePdfLineKey(product: Product): 'premium' | 'masiva' | null {
+    const normalizedName = this.normalizeText(product.name);
+
+    if (normalizedName.includes('don julian') || normalizedName.includes('mateite') || normalizedName.includes('yerbella')) {
+      return 'premium';
+    }
+
+    if (normalizedName.includes('caricias de mate') || normalizedName.includes('mate y playa')) {
+      return 'masiva';
+    }
+
+    return null;
+  }
+
   private getCommercePdfRowCode(product: Product): string {
     return product.sku?.trim() || product.id;
   }
@@ -768,6 +798,11 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     }
 
     const normalizedName = this.normalizeText(product.name);
+
+    if (normalizedName.includes('despalada')) {
+      return [product.image];
+    }
+
     const candidates: Array<[string, string]> = [
       ['mate cocido don julian', 'assets/pdf-products/MC Mate cocido DON JULIAN.jpeg'],
       ['yerbella', 'assets/pdf-products/YM Yerbella ORGANICA.jpeg'],
@@ -906,43 +941,47 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
     const headerX = (pageWidth - this.pdfDetailWidth) / 2;
     const headerY = 8;
     const headerWidth = this.pdfDetailWidth;
-    const headerHeight = 17;
+    const headerHeight = 23;
 
-    pdf.setFillColor(248, 249, 243);
+    pdf.setFillColor(246, 249, 239);
     pdf.roundedRect(headerX, headerY, headerWidth, headerHeight, 1.8, 1.8, 'F');
-    pdf.setFillColor(84, 111, 63);
-    pdf.roundedRect(headerX, headerY, headerWidth, 2.4, 1.8, 1.8, 'F');
-    pdf.rect(headerX, headerY + 1.2, headerWidth, 1.2, 'F');
-    pdf.setDrawColor(205, 214, 181);
+    pdf.setFillColor(48, 77, 35);
+    pdf.roundedRect(headerX, headerY, headerWidth, 14.5, 1.8, 1.8, 'F');
+    pdf.rect(headerX, headerY + 1.8, headerWidth, 12.7, 'F');
+    pdf.setDrawColor(189, 207, 161);
     pdf.setLineWidth(0.2);
     pdf.roundedRect(headerX, headerY, headerWidth, headerHeight, 1.8, 1.8, 'S');
 
-    pdf.setTextColor(94, 119, 73);
+    pdf.setTextColor(224, 239, 202);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5.4);
-    pdf.text('sansaju.ventas@gmail.com', headerX + 4.2, headerY + 5.2);
-    pdf.setTextColor(42, 59, 33);
-    pdf.setFontSize(7.2);
-    pdf.text('Whatsapp 3758-418515', headerX + 4.2, headerY + 9);
+    pdf.setFontSize(5.2);
+    pdf.text('AMATE | PEDIDOS COMERCIALES', headerX + 5, headerY + 5.2);
 
-    pdf.setTextColor(43, 52, 36);
+    pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10.1);
-    pdf.text(`Comercios y puntos de venta - ${this.getPdfGeneratedDateLabel()}`, headerX + headerWidth / 2, headerY + 6.9, { align: 'center' });
-    pdf.setTextColor(92, 107, 81);
+    pdf.setFontSize(12);
+    pdf.text('Comercios y puntos de venta', headerX + 5, headerY + 11.5);
+
+    pdf.setTextColor(225, 239, 205);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(5.6);
-    pdf.text('Detalle de precios comerciales segun la vista actual', headerX + headerWidth / 2, headerY + 10.6, { align: 'center' });
+    pdf.setFontSize(5.5);
+    pdf.text(`Vigencia: ${this.getPdfGeneratedDateLabel()}`, headerX + headerWidth - 24, headerY + 5.2, { align: 'right' });
+    pdf.text('Precios por pack y unidad para comercios', headerX + headerWidth - 24, headerY + 11.5, { align: 'right' });
+
+    pdf.setTextColor(60, 83, 43);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(5.5);
+    pdf.text('Contacto comercial: sansaju.ventas@gmail.com  |  WhatsApp 3758-418515', headerX + 5, headerY + 19.2);
 
     if (logoData) {
       try {
         const logoAnchorRight = headerX + headerWidth - 4.2;
         const logoProps = pdf.getImageProperties(logoData);
         const logoRatio = logoProps.width / logoProps.height;
-        let renderWidth = 18.5;
+        let renderWidth = 17;
         let renderHeight = renderWidth / logoRatio;
-        if (renderHeight > 11.5) {
-          renderHeight = 11.5;
+        if (renderHeight > 10.5) {
+          renderHeight = 10.5;
           renderWidth = renderHeight * logoRatio;
         }
         pdf.addImage(logoData, 'PNG', logoAnchorRight - renderWidth, headerY + (headerHeight - renderHeight) / 2 + 0.8, renderWidth, renderHeight);
@@ -951,8 +990,23 @@ export class CommercePosCatalogComponent implements OnInit, OnDestroy {
       }
     }
 
-    pdf.setDrawColor(214, 221, 191);
-    pdf.line(headerX, 24.8, headerX + headerWidth, 24.8);
+    pdf.setDrawColor(198, 214, 174);
+    pdf.line(headerX, headerY + headerHeight + 1.8, headerX + headerWidth, headerY + headerHeight + 1.8);
+  }
+
+  private drawCommercePdfFooter(pdf: any, pageNumber: number): void {
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const footerX = (pageWidth - this.pdfDetailWidth) / 2;
+
+    pdf.setDrawColor(198, 214, 174);
+    pdf.setLineWidth(0.6);
+    pdf.line(footerX, pageHeight - 11, footerX + this.pdfDetailWidth, pageHeight - 11);
+    pdf.setTextColor(91, 112, 73);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.4);
+    pdf.text('AMATE | Comercios y puntos de venta | sansaju.ventas@gmail.com', footerX, pageHeight - 7);
+    pdf.text(`Pagina ${pageNumber}`, footerX + this.pdfDetailWidth, pageHeight - 7, { align: 'right' });
   }
 
   private getUnitDivisor(product: Product): number {
